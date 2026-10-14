@@ -34,6 +34,25 @@ LoRA и VAE одинаковые для обоих профилей.
 python scripts/generate.py --profile server -p "..." --count 4 --width 832 --height 1216
 ```
 
+## Image-to-image
+
+Два режима, оба с LoRA:
+
+- **Редактирование** (родной режим Qwen Image 2.1). Модель видит картинку и выполняет инструкцию;
+  лицо, поза и фон сохраняются. В промпте исходная картинка называется `<image1>`.
+  ```
+  python scripts/generate.py --image in.png -p "Change the outfit of the person in <image1> to a red dress, keep the face and pose unchanged."
+  ```
+  В интерфейсе: `workflows/qwen21_nsfw_edit_local.json` (или `_server.json`), картинку выбрать в узле «Input image».
+- **Классический img2img**: картинка частично зашумляется и перерисовывается по промпту.
+  `--denoise` задаёт силу: до ~0.6 почти ничего не меняется, 0.7–0.85 даёт заметные изменения с сохранением композиции.
+  ```
+  python scripts/generate.py --image in.png --denoise 0.75 -p "realistic photograph of ..."
+  ```
+
+Не используйте фотографии реальных людей без их согласия: создание интимных изображений
+реальных людей без согласия во многих странах уголовно наказуемо.
+
 ## Настройки (рекомендации автора LoRA)
 
 - 25+ шагов (по умолчанию 30), CFG 3–6 (по умолчанию 4)

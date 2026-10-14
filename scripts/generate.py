@@ -1,24 +1,68 @@
 """Генерация без браузера: отправляет workflow в запущенный ComfyUI.
 
-Пример:
-  python scripts/generate.py --profile server -p "photo of ..." --count 4 --width 832 --height 1216
+Текст в картинку:
+  python scripts/generate.py -p "photo of ..." --count 4 --width 832 --height 1216
+Редактирование (модель видит картинку и выполняет инструкцию, <image1> = исходная):
+  python scripts/generate.py --image in.png -p "Change the outfit of the person in <image1> to a red dress, keep the face and pose"
+Классический img2img (перерисовка с силой --denoise, 0.3 - лёгкая, 0.8 - сильная):
+  python scripts/generate.py --image in.png --denoise 0.6 -p "photo of ..."
 Картинки сохраняются в output/.
 """
 import argparse
 import json
+import mimetypes
 import random
 import sys
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+MEGAPIXEL = 1024 * 1024
 
 
 def post(url, payload):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req) as resp:
         return json.load(resp)
+
+
+def upload_image(host, path):
+    boundary = uuid.uuid4().hex
+    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    body = b"".join([
+        f"--{boundary}\r\n".encode(),
+        f'Content-Disposition: form-data; name="image"; filename="{path.name}"\r\n'.encode(),
+        f"Content-Type: {content_type}\r\n\r\n".encode(),
+        path.read_bytes(),
+        f"\r\n--{boundary}\r\n".encode(),
+        b'Content-Disposition: form-data; name="overwrite"\r\n\r\ntrue',
+        f"\r\n--{boundary}--\r\n".encode(),
+    ])
+    req = urllib.request.Request(f"{host}/upload/image", data=body,
+                                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req) as resp:
+        result = json.load(resp)
+    return f"{result['subfolder']}/{result['name']}" if result.get("subfolder") else result["name"]
+
+
+def add_edit(workflow, image_name):
+    """Исходная картинка идёт в текстовый энкодер как <image1>, латент берётся её размера."""
+    workflow["10"] = {"class_type": "LoadImage", "_meta": {"title": "Input image"}, "inputs": {"image": image_name}}
+    workflow["5"]["inputs"].update({"vae": ["4", 0], "images.image_1": ["10", 0]})
+    workflow["7"]["inputs"]["latent_image"] = ["5", 2]
+    del workflow["6"]
+
+
+def add_img2img(workflow, image_name, denoise):
+    """Картинка приводится к ~1 Мп и кодируется в латент, который частично перерисовывается."""
+    workflow["10"] = {"class_type": "LoadImage", "_meta": {"title": "Input image"}, "inputs": {"image": image_name}}
+    workflow["11"] = {"class_type": "ImageScaleToTotalPixels",
+                      "inputs": {"image": ["10", 0], "upscale_method": "lanczos", "megapixels": 1.0, "resolution_steps": 32}}
+    workflow["12"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["11", 0], "vae": ["4", 0]}}
+    workflow["7"]["inputs"].update(latent_image=["12", 0], denoise=denoise)
+    del workflow["6"]
 
 
 def main():
@@ -28,6 +72,8 @@ def main():
     parser.add_argument("--profile", default="local", choices=["local", "server"])
     parser.add_argument("-p", "--prompt", required=True)
     parser.add_argument("-n", "--negative")
+    parser.add_argument("--image", type=Path, help="исходная картинка: режим edit, а с --denoise - img2img")
+    parser.add_argument("--denoise", type=float, help="сила перерисовки для img2img, 0..1")
     parser.add_argument("--count", type=int, default=1)
     parser.add_argument("--seed", type=int, help="по умолчанию случайный")
     parser.add_argument("--width", type=int, default=1024)
@@ -37,6 +83,8 @@ def main():
     parser.add_argument("--lora", type=float, help="сила LoRA, автор советует 0.8-1.0")
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
+    if args.denoise is not None and not args.image:
+        parser.error("--denoise работает только вместе с --image")
 
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     workflow["5"]["inputs"]["prompt"] = args.prompt
@@ -50,6 +98,12 @@ def main():
         sampler["cfg"] = args.cfg
     if args.lora is not None:
         workflow["2"]["inputs"]["strength_model"] = args.lora
+    if args.image:
+        image_name = upload_image(args.host, args.image)
+        if args.denoise is None:
+            add_edit(workflow, image_name)
+        else:
+            add_img2img(workflow, image_name, args.denoise)
 
     seed = args.seed if args.seed is not None else random.randrange(2**48)
     ids = []
