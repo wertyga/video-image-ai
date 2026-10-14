@@ -4,6 +4,8 @@ param(
     [string]$Profile = "local-16gb"
 )
 $ErrorActionPreference = "Stop"
+# Python scripts print UTF-8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
