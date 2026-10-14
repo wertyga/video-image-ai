@@ -1,7 +1,7 @@
-# Windows setup: .\scripts\setup.ps1 -Profile local-16gb
+# Windows setup: .\scripts\setup.ps1 -Profile local-16gb[,h3-server]
 param(
-    [ValidateSet("local-16gb", "server")]
-    [string]$Profile = "local-16gb"
+    [ValidateSet("local-16gb", "server", "h3-server", "h3-server-bf16")]
+    [string[]]$Profile = @("local-16gb")
 )
 $ErrorActionPreference = "Stop"
 # Python scripts print UTF-8

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Установка на Linux: ./scripts/setup.sh server
+# Установка на Linux: ./scripts/setup.sh server [h3-server ...]
 set -euo pipefail
-PROFILE="${1:-server}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -17,5 +16,5 @@ PY="$ROOT/.venv/bin/python"
 "$PY" -m pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu130
 "$PY" -m pip install -r ComfyUI/requirements.txt
 
-"$PY" scripts/download_models.py --profile "$PROFILE"
+"$PY" scripts/download_models.py --profile "${@:-server}"
 echo "Готово. Запуск: ./scripts/run.sh"

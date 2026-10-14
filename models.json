@@ -2,11 +2,43 @@
   "profiles": {
     "local-16gb": {
       "description": "RTX 4060 Ti 16GB / 32GB RAM: int8-веса (~17 ГБ скачать)",
-      "files": ["unet_int8", "te_int8", "vae", "lora_nsfw_v2"]
+      "files": [
+        "unet_int8",
+        "te_int8",
+        "vae",
+        "lora_nsfw_v2"
+      ]
     },
     "server": {
       "description": "48GB+ VRAM: полные bf16-веса, максимальное качество (~33 ГБ скачать)",
-      "files": ["unet_bf16", "te_bf16", "vae", "lora_nsfw_v2"]
+      "files": [
+        "unet_bf16",
+        "te_bf16",
+        "vae",
+        "lora_nsfw_v2"
+      ]
+    },
+    "h3-server": {
+      "description": "MiniMax H3 видео + NSFW LoRA, int8 (~53 ГБ скачать), GPU 48GB+",
+      "files": [
+        "h3_unet_int8",
+        "h3_te_int8",
+        "h3_video_vae_int8",
+        "h3_audio_vae",
+        "h3_turbo_8step",
+        "h3_lora_nsfw_v2"
+      ]
+    },
+    "h3-server-bf16": {
+      "description": "MiniMax H3 видео + NSFW LoRA, bf16, максимальное качество (~100 ГБ скачать), GPU 80GB",
+      "files": [
+        "h3_unet_bf16",
+        "h3_te_bf16",
+        "h3_video_vae_fp16",
+        "h3_audio_vae",
+        "h3_turbo_8step",
+        "h3_lora_nsfw_v2"
+      ]
     }
   },
   "files": {
@@ -34,6 +66,44 @@
       "url": "https://civitai.com/api/download/models/3357315?fileId=3244894",
       "dir": "loras",
       "name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "auth": "civitai"
+    },
+    "h3_unet_int8": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "dir": "diffusion_models"
+    },
+    "h3_unet_bf16": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_bf16.safetensors",
+      "dir": "diffusion_models"
+    },
+    "h3_te_int8": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "dir": "text_encoders"
+    },
+    "h3_te_bf16": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors",
+      "dir": "text_encoders"
+    },
+    "h3_video_vae_int8": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors",
+      "dir": "vae"
+    },
+    "h3_video_vae_fp16": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors",
+      "dir": "vae"
+    },
+    "h3_audio_vae": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors",
+      "dir": "vae"
+    },
+    "h3_turbo_8step": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "dir": "loras"
+    },
+    "h3_lora_nsfw_v2": {
+      "url": "https://civitai.com/api/download/models/3354822?fileId=3242253",
+      "dir": "loras",
+      "name": "minimax_h3_nsfw_unlocked_v2.safetensors",
       "auth": "civitai"
     }
   }

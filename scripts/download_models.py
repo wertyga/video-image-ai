@@ -1,6 +1,6 @@
 """Скачивает модели для выбранного профиля из models.json в ComfyUI/models.
 
-Использование: python scripts/download_models.py --profile local-16gb|server
+Использование: python scripts/download_models.py --profile local-16gb|server|h3-server|... [ещё профили]
 Поддерживает докачку: недокачанные файлы лежат рядом с суффиксом .part.
 Токены берутся из переменных окружения или файла .env в корне репозитория.
 """
@@ -84,14 +84,17 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     config = json.loads((ROOT / "models.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", required=True, choices=sorted(config["profiles"]))
+    parser.add_argument("--profile", required=True, nargs="+", choices=sorted(config["profiles"]))
     parser.add_argument("--models-dir", default=str(ROOT / "ComfyUI" / "models"))
     args = parser.parse_args()
 
     load_env()
-    profile = config["profiles"][args.profile]
-    print(f"Профиль {args.profile}: {profile['description']}")
-    for key in profile["files"]:
+    keys = []
+    for name in args.profile:
+        profile = config["profiles"][name]
+        print(f"Профиль {name}: {profile['description']}")
+        keys += [key for key in profile["files"] if key not in keys]
+    for key in keys:
         spec = config["files"][key]
         target_dir = Path(args.models_dir) / spec["dir"]
         target_dir.mkdir(parents=True, exist_ok=True)
