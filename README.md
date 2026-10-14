@@ -56,6 +56,8 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
   python scripts/generate.py --image in.png --denoise 0.75 -p "realistic photograph of ..."
   ```
 
+Один и тот же вымышленный персонаж в разных сценах, без эффекта вклеенного лица: [docs/characters.md](docs/characters.md).
+
 Не используйте фотографии реальных людей без их согласия: создание интимных изображений
 реальных людей без согласия во многих странах уголовно наказуемо.
 
