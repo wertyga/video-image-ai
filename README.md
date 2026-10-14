@@ -44,6 +44,12 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
   python scripts/generate.py --image in.png -p "Change the outfit of the person in <image1> to a red dress, keep the face and pose unchanged."
   ```
   В интерфейсе: `workflows/qwen21_nsfw_edit_local.json` (или `_server.json`), картинку выбрать в узле «Input image».
+
+  До 16 картинок: `<image1>` редактируется (и задаёт размер результата), остальные служат образцами.
+  ```
+  python scripts/generate.py --image person.png --image dress.png -p "The person in <image1> wearing the dress from <image2>, keep the face from <image1>."
+  ```
+  В интерфейсе: `workflows/qwen21_nsfw_edit2_local.json`, вторая картинка в узле «Reference image 2».
 - **Классический img2img**: картинка частично зашумляется и перерисовывается по промпту.
   `--denoise` задаёт силу: до ~0.6 почти ничего не меняется, 0.7–0.85 даёт заметные изменения с сохранением композиции.
   ```

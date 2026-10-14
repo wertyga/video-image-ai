@@ -58,7 +58,7 @@
         0
       ],
       "images.image_1": [
-        "10",
+        "20",
         0
       ]
     }
@@ -116,7 +116,7 @@
       "filename_prefix": "qwen21_nsfw"
     }
   },
-  "10": {
+  "20": {
     "class_type": "LoadImage",
     "_meta": {
       "title": "Input image"

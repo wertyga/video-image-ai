@@ -4,6 +4,8 @@
   python scripts/generate.py -p "photo of ..." --count 4 --width 832 --height 1216
 Редактирование (модель видит картинку и выполняет инструкцию, <image1> = исходная):
   python scripts/generate.py --image in.png -p "Change the outfit of the person in <image1> to a red dress, keep the face and pose"
+Несколько картинок: <image1> редактируется, остальные - референсы:
+  python scripts/generate.py --image person.png --image dress.png -p "The person in <image1> wearing the dress from <image2>"
 Классический img2img (перерисовка с силой --denoise, 0.3 - лёгкая, 0.8 - сильная):
   python scripts/generate.py --image in.png --denoise 0.6 -p "photo of ..."
 Картинки сохраняются в output/.
@@ -47,10 +49,14 @@ def upload_image(host, path):
     return f"{result['subfolder']}/{result['name']}" if result.get("subfolder") else result["name"]
 
 
-def add_edit(workflow, image_name):
-    """Исходная картинка идёт в текстовый энкодер как <image1>, латент берётся её размера."""
-    workflow["10"] = {"class_type": "LoadImage", "_meta": {"title": "Input image"}, "inputs": {"image": image_name}}
-    workflow["5"]["inputs"].update({"vae": ["4", 0], "images.image_1": ["10", 0]})
+def add_edit(workflow, image_names):
+    """Картинки идут в текстовый энкодер как <image1>, <image2>, ...; латент берётся размера первой."""
+    workflow["5"]["inputs"]["vae"] = ["4", 0]
+    for i, image_name in enumerate(image_names, 1):
+        node_id = str(19 + i)  # 20, 21, ...
+        title = "Input image" if i == 1 else f"Reference image {i}"
+        workflow[node_id] = {"class_type": "LoadImage", "_meta": {"title": title}, "inputs": {"image": image_name}}
+        workflow["5"]["inputs"][f"images.image_{i}"] = [node_id, 0]
     workflow["7"]["inputs"]["latent_image"] = ["5", 2]
     del workflow["6"]
 
@@ -72,7 +78,8 @@ def main():
     parser.add_argument("--profile", default="local", choices=["local", "server"])
     parser.add_argument("-p", "--prompt", required=True)
     parser.add_argument("-n", "--negative")
-    parser.add_argument("--image", type=Path, help="исходная картинка: режим edit, а с --denoise - img2img")
+    parser.add_argument("--image", type=Path, action="append",
+                        help="картинка для режима edit; можно несколько раз (<image1>, <image2>, ...); с --denoise - img2img")
     parser.add_argument("--denoise", type=float, help="сила перерисовки для img2img, 0..1")
     parser.add_argument("--count", type=int, default=1)
     parser.add_argument("--seed", type=int, help="по умолчанию случайный")
@@ -85,6 +92,10 @@ def main():
     args = parser.parse_args()
     if args.denoise is not None and not args.image:
         parser.error("--denoise работает только вместе с --image")
+    if args.denoise is not None and len(args.image) > 1:
+        parser.error("img2img (--denoise) принимает одну картинку, несколько - только в режиме edit")
+    if args.image and len(args.image) > 16:
+        parser.error("не больше 16 картинок")
 
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     workflow["5"]["inputs"]["prompt"] = args.prompt
@@ -99,11 +110,11 @@ def main():
     if args.lora is not None:
         workflow["2"]["inputs"]["strength_model"] = args.lora
     if args.image:
-        image_name = upload_image(args.host, args.image)
+        image_names = [upload_image(args.host, path) for path in args.image]
         if args.denoise is None:
-            add_edit(workflow, image_name)
+            add_edit(workflow, image_names)
         else:
-            add_img2img(workflow, image_name, args.denoise)
+            add_img2img(workflow, image_names[0], args.denoise)
 
     seed = args.seed if args.seed is not None else random.randrange(2**48)
     ids = []
