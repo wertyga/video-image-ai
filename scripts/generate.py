@@ -7,6 +7,7 @@
 import argparse
 import json
 import random
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -21,6 +22,8 @@ def post(url, payload):
 
 
 def main():
+    # консоль Windows может быть не в UTF-8
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", default="local", choices=["local", "server"])
     parser.add_argument("-p", "--prompt", required=True)

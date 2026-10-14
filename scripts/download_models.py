@@ -80,6 +80,8 @@ def download(spec, target):
 
 
 def main():
+    # консоль Windows может быть не в UTF-8
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     config = json.loads((ROOT / "models.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", required=True, choices=sorted(config["profiles"]))
