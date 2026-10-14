@@ -96,3 +96,27 @@ Load Image и подключить к `first_frame` / `last_frame` узла «Pr
 
 Модель использует pruned-версию H3: в ней все слои, которые меняют обе LoRA, совпадают с полной.
 На реальном GPU эта связка ещё не запускалась.
+
+## Обучение LoRA персонажа (ai-toolkit)
+
+Стабильное лицо без `<image1>`: LoRA учится на 20–30 картинках персонажа и включается триггер-словом.
+Подробности про персонажей: [docs/characters.md](docs/characters.md).
+
+1. Установить тренер (один раз, ставит Python 3.12 через uv, ~8 ГБ):
+   `.\scripts\setup_trainer.ps1` / `./scripts/setup_trainer.sh`
+2. Датасет: папка `datasets/<имя>/` с `ref.png` (опорный портрет), `trigger.txt` (например `ohwx woman`)
+   и `prompts.txt` (сцена на строку, персонаж = `the woman from <image1>`). В каждой сцене указывать одежду,
+   иначе модель переносит одежду с портрета и LoRA выучит её как часть персонажа. ComfyUI должен быть запущен:
+   ```
+   python scripts/make_dataset.py datasets/auburn_freckles
+   python scripts/contact_sheet.py datasets/auburn_freckles/images sheet.jpg   # просмотреть и удалить неудачные (png + txt)
+   ```
+3. Обучение (ComfyUI остановить — нужна вся видеопамять). Модели берутся из `ComfyUI/models`:
+   ```
+   .\scripts\train_lora.ps1 training\auburn_freckles.yaml
+   ```
+   Промежуточные LoRA и тестовые картинки каждые 250 шагов: `ai-toolkit/output/<name>/`.
+4. Выбранный `.safetensors` скопировать в `ComfyUI/models/loras` и подключить вторым LoraLoaderModelOnly
+   (или вместо NSFW LoRA). В промпте писать триггер: `photo of ohwx woman ...`.
+
+Только вымышленные персонажи, вы сами или взрослые, которые на это согласились.

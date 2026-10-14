@@ -88,6 +88,8 @@ def main():
     parser.add_argument("--steps", type=int)
     parser.add_argument("--cfg", type=float)
     parser.add_argument("--lora", type=float, help="сила LoRA, автор советует 0.8-1.0")
+    parser.add_argument("--extra-lora", action="append", default=[], metavar="FILE[:STRENGTH]",
+                        help="дополнительная LoRA из ComfyUI/models/loras, например персонажа: auburn_freckles_v1.safetensors:1.0")
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
     if args.denoise is not None and not args.image:
@@ -109,6 +111,14 @@ def main():
         sampler["cfg"] = args.cfg
     if args.lora is not None:
         workflow["2"]["inputs"]["strength_model"] = args.lora
+    model = ["2", 0]
+    for i, spec in enumerate(args.extra_lora):
+        name, _, strength = spec.partition(":")
+        node_id = str(30 + i)
+        workflow[node_id] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": f"Extra LoRA {i + 1}"},
+                             "inputs": {"model": model, "lora_name": name, "strength_model": float(strength or 1.0)}}
+        model = [node_id, 0]
+    sampler["model"] = model
     if args.image:
         image_names = [upload_image(args.host, path) for path in args.image]
         if args.denoise is None:
