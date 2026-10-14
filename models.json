@@ -1,0 +1,40 @@
+{
+  "profiles": {
+    "local-16gb": {
+      "description": "RTX 4060 Ti 16GB / 32GB RAM: int8-веса (~17 ГБ скачать)",
+      "files": ["unet_int8", "te_int8", "vae", "lora_nsfw_v2"]
+    },
+    "server": {
+      "description": "48GB+ VRAM: полные bf16-веса, максимальное качество (~33 ГБ скачать)",
+      "files": ["unet_bf16", "te_bf16", "vae", "lora_nsfw_v2"]
+    }
+  },
+  "files": {
+    "unet_bf16": {
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_bf16.safetensors",
+      "dir": "diffusion_models"
+    },
+    "unet_int8": {
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_int8_convrot.safetensors",
+      "dir": "diffusion_models"
+    },
+    "te_bf16": {
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_bf16.safetensors",
+      "dir": "text_encoders"
+    },
+    "te_int8": {
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+      "dir": "text_encoders"
+    },
+    "vae": {
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+      "dir": "vae"
+    },
+    "lora_nsfw_v2": {
+      "url": "https://civitai.com/api/download/models/3357315?fileId=3244894",
+      "dir": "loras",
+      "name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "auth": "civitai"
+    }
+  }
+}

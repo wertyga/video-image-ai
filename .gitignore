@@ -1,0 +1,6 @@
+# ComfyUI ставится скриптом setup, модели качаются отдельно
+/ComfyUI/
+/output/
+.venv/
+.env
+__pycache__/
