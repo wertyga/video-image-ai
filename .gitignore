@@ -5,3 +5,24 @@
 .env
 __pycache__/
 /ai-toolkit/
+
+# Модели и недокачанные файлы
+*.safetensors
+*.ckpt
+*.part
+
+# Сгенерированные картинки: портреты персонажей и датасеты (подписи и настройки остаются в git)
+/characters/
+/datasets/*/images/
+/datasets/*/ref.png
+sheet.jpg
+
+# Личные настройки IDE и Claude Code
+/.idea/*.iml
+/.idea/modules.xml
+/.claude/settings.local.json
+
+# Системный мусор
+Thumbs.db
+desktop.ini
+.DS_Store

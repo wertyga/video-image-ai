@@ -81,6 +81,7 @@ Text-to-video и image-to-video (первый и/или последний ка�
 python scripts/generate_video.py -p "..." --seconds 5
 python scripts/generate_video.py --first-frame start.png -p "..." --seconds 8
 python scripts/generate_video.py --profile server_bf16 --first-frame a.png --last-frame b.png -p "..."
+python scripts/generate_video.py -p "..." --style 1.0   # рисованный стиль
 ```
 
 В интерфейсе: `workflows/h3_nsfw_server.json` (или `_server_bf16.json`). Для image-to-video добавить узел
@@ -93,6 +94,13 @@ Load Image и подключить к `first_frame` / `last_frame` узла «Pr
 - длина: модель обучена на ~5–15 с; кадры округляются до сетки 17k+5 (5 с = 124 кадра)
 - в промпте одним текстом описывать сцену, движения камеры и звук (реплики, шумы, музыку)
 - триггеры автора: `nude`, `topless`, `naked`, `disrobing`, `slipping off robe`, `caressing`, `intimate kissing`
+
+Рисованный стиль: [Digital Art Style LoRA v3](https://civitai.com/models/2930448), включается флагом `--style`
+(третий LoraLoaderModelOnly после NSFW LoRA, триггер `flat cel shading, bold outlines, multi colors`
+дописывается в начало промпта сам). В интерфейсе: `workflows/h3_digital_art_server.json` (или `_server_bf16.json`),
+триггер там уже стоит в начале промпта. Сила 0.8–1.5: 0.8 мягкий graphic novel, выше — жёстче контуры и контраст.
+Совместимость с pruned-моделью и NSFW LoRA автор не проверял: при `lora key not loaded` в логе ComfyUI
+стиль применился не полностью — тогда пробовать bf16-профиль.
 
 Модель использует pruned-версию H3: в ней все слои, которые меняют обе LoRA, совпадают с полной.
 На реальном GPU эта связка ещё не запускалась.

@@ -26,7 +26,8 @@
         "h3_video_vae_int8",
         "h3_audio_vae",
         "h3_turbo_8step",
-        "h3_lora_nsfw_v2"
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
       ]
     },
     "h3-server-bf16": {
@@ -37,7 +38,8 @@
         "h3_video_vae_fp16",
         "h3_audio_vae",
         "h3_turbo_8step",
-        "h3_lora_nsfw_v2"
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
       ]
     }
   },
@@ -104,6 +106,12 @@
       "url": "https://civitai.com/api/download/models/3354822?fileId=3242253",
       "dir": "loras",
       "name": "minimax_h3_nsfw_unlocked_v2.safetensors",
+      "auth": "civitai"
+    },
+    "h3_lora_digital_art": {
+      "url": "https://civitai.com/api/download/models/3404381?fileId=3295558",
+      "dir": "loras",
+      "name": "minimax_h3_digital_art_v3.safetensors",
       "auth": "civitai"
     }
   }
