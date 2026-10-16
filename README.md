@@ -105,6 +105,80 @@ Load Image и подключить к `first_frame` / `last_frame` узла «Pr
 Модель использует pruned-версию H3: в ней все слои, которые меняют обе LoRA, совпадают с полной.
 На реальном GPU эта связка ещё не запускалась.
 
+## HTTP API (картинки, видео, персонажи)
+
+NestJS-сервис в `api/` поверх ComfyUI: принимает задание, ставит в очередь и отдаёт png/mp4.
+Базы нет — id задания это `prompt_id` ComfyUI, статус берётся из его очереди и истории
+(после перезапуска ComfyUI старые id пропадают). Персонажи хранятся файлами в `api/data/characters/`.
+
+На сервере (после `setup.sh`, ComfyUI запущен):
+```
+./scripts/setup_api.sh      # Node 22, сборка, api/.env со случайным API_TOKEN
+./scripts/run_api.sh        # слушает PORT из api/.env (8000)
+```
+В `api/.env` `COMFY_URL` должен совпадать с портом ComfyUI (`run.sh --port 8189` → `http://127.0.0.1:8189`),
+`COMFY_PROFILE` — со скачанным видео-профилем (`server` или `server_bf16`), `COMFY_IMAGE_PROFILE` — с профилем
+картинок (`server` или `local`). Для видео с персонажем нужны оба: `./scripts/setup.sh server h3-server`.
+
+Наружу открывать только API, не ComfyUI. На vast.ai: в шаблоне `-p 8000:8000`
+(внешний порт виден в «IP Port Info»), либо HTTPS-адрес без открытия портов: `cloudflared tunnel --url http://localhost:8000`.
+Без HTTPS токен идёт открытым текстом.
+
+| Запрос | Ответ |
+|---|---|
+| `POST /characters` (multipart: `portrait` + поля) | персонаж |
+| `GET /characters`, `GET /characters/:id`, `GET /characters/:id/portrait` | список, персонаж, портрет |
+| `PATCH /characters/:id` (JSON) | персонаж с изменёнными полями |
+| `DELETE /characters/:id` | `204` |
+| `POST /images` (JSON или multipart) | `202 {id, status, url, seed}` |
+| `POST /videos` (multipart или JSON) | `202 {id, status, url, seed, frames}` |
+| `GET /jobs/:id` | `{id, status: queued\|running\|done\|error, url?, error?}` |
+| `GET /jobs/:id/file` | png или mp4 (`409`, пока не готово) |
+| `GET /health` | без токена: API и ComfyUI живы |
+
+### Персонажи
+
+Персонаж — это портрет (как в [docs/characters.md](docs/characters.md): по колено, в одежде, ровный свет)
+и, по желанию, обученные LoRA. Поля: `id` (латиница, его передают в `character`), `subject` (как назвать
+персонажа в промпте, по умолчанию `the person`, лучше `the woman` / `the man`), `image_lora` (Qwen),
+`video_lora` (H3), `trigger`, `strength` (сила LoRA персонажа, 1).
+
+В промпте место персонажа отмечается `{character}`:
+- **без LoRA** картинка рисуется в режиме edit с портретом: `{character}` → `the woman from <image1>`.
+  Без `width`/`height` размер берётся с портрета;
+- **с `image_lora`** — обычная генерация, LoRA персонажа подключается после NSFW LoRA, `{character}` → триггер;
+- **видео**: если не передан `first_frame`, первый кадр с персонажем рисует Qwen в том же задании
+  (размером с видео, по `frame_prompt`, по умолчанию по `prompt`), дальше H3 оживляет его.
+  С `video_lora` LoRA персонажа подключается и в H3, `{character}` → триггер, иначе → `subject`.
+
+Без `{character}` ссылка на персонажа дописывается в начало промпта (в видео без LoRA не дописывается).
+
+### Режимы
+
+`mode`: `nsfw` (по умолчанию, реалистично) или `anime`. В видео `anime` включает Digital Art LoRA
+(сила `style`, по умолчанию 1); у Qwen аниме-LoRA нет, стиль задаётся текстом в начале промпта.
+NSFW LoRA работает в обоих режимах, её сила — `lora`.
+
+Поля `POST /images`: `prompt` (обязательно), `negative`, `character`, `mode`, `width`, `height`, `steps`, `cfg`,
+`lora`, `seed` — как у `generate.py`. Поля `POST /videos`: `prompt` (обязательно), `character`, `frame_prompt`,
+`mode`, `seconds`, `width`, `height`, `steps`, `lora`, `style`, `seed` — как у `generate_video.py`;
+картинки `first_frame`, `last_frame` (png/jpeg/webp до 20 МБ).
+
+```
+curl -H "Authorization: Bearer $TOKEN" -F id=anna -F subject="the woman" -F portrait=@characters/anna.png https://<host>/characters
+curl -H "Authorization: Bearer $TOKEN" -F character=anna -F mode=anime -F prompt="{character} reading on a sunlit balcony" https://<host>/images
+curl -H "Authorization: Bearer $TOKEN" -F character=anna -F seconds=6 \
+     -F frame_prompt="{character} standing by the window in a bedroom, soft morning light" \
+     -F prompt="The woman turns to the camera and smiles, slow push-in, quiet room tone" https://<host>/videos
+curl -H "Authorization: Bearer $TOKEN" https://<host>/jobs/<id>
+curl -H "Authorization: Bearer $TOKEN" -o out.mp4 https://<host>/jobs/<id>/file
+# после обучения LoRA
+curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"image_lora":"anna_v1.safetensors","trigger":"ohwx woman"}' https://<host>/characters/anna
+```
+
+Тесты: `cd api && npm test`.
+
 ## Обучение LoRA персонажа (ai-toolkit)
 
 Стабильное лицо без `<image1>`: LoRA учится на 20–30 картинках персонажа и включается триггер-словом.

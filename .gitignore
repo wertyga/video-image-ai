@@ -26,3 +26,8 @@ sheet.jpg
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# HTTP API (api/)
+node_modules/
+/api/dist/
+/api/data/
