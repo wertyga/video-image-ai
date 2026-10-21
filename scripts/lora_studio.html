@@ -43,7 +43,7 @@
   .add { width: 100px; height: 100px; display: grid; place-items: center; text-align: center; font-size: 13px; color: var(--muted);
     border: 1px solid var(--line); border-radius: 8px; cursor: pointer; padding: 6px; }
   .add:hover { border-color: var(--accent); color: var(--accent); }
-  .add input { display: none; }
+  .add input, .add[hidden] { display: none; }
 
   .candidates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
   .cand { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
@@ -182,8 +182,14 @@
     <h2>Генерация с LoRA</h2>
     <label class="field">Промпт
       <textarea id="gen-prompt" spellcheck="false" placeholder="Photograph of nst woman sitting at a cafe table, wearing a beige knit sweater, looking directly at the camera, warm afternoon light, natural skin texture"></textarea>
-      <div class="hint">Персонаж вызывается ключевым словом, без &lt;image1&gt;. Ракурс и взгляд лучше писать явно.</div>
+      <div class="hint">Персонаж вызывается ключевым словом. Ракурс и взгляд лучше писать явно.</div>
     </label>
+    <div class="field" style="margin-top:12px">Референс <span class="hint">необязательно</span></div>
+    <div class="photos" id="gen-ref">
+      <label class="add">+ Картинка<br>или перетащить сюда<input type="file" accept="image/*"></label>
+    </div>
+    <div class="hint">Картинка становится <b>&lt;image1&gt;</b>, размер берётся с неё. Например: <b>Replace the woman in &lt;image1&gt;
+      with nst woman, keep the exact pose, outfit, background and lighting of &lt;image1&gt;</b>.</div>
     <div class="gen-fields">
       <label class="field">LoRA
         <select id="gen-lora"></select>
@@ -499,6 +505,11 @@
       el.querySelector('img').title = g.prompt || '';
       if (g.lora) el.querySelector('.info').textContent = `${g.lora.replace(/\.safetensors$/, '')} · ${g.strength} · NSFW ${g.nsfw}` +
         (g.skin ? ` · кожа ${g.skin}` : '');
+      if (g.ref_url) {
+        const a = document.createElement('a');
+        a.href = g.ref_url; a.target = '_blank'; a.textContent = 'референс';
+        el.querySelector('.info').append(' · ', a);
+      }
       el.querySelector('.again').disabled = !g.prompt;
       el.querySelector('.again').onclick = () => {
         $('#gen-prompt').value = g.prompt;
@@ -626,10 +637,38 @@
     el.onchange = el.oninput = () => remember('lora-studio-gen-' + field, el.value);
   });
   $('#gen-lora').onchange = e => remember('lora-studio-gen-lora', e.target.value);
+
+  // референс живёт только в странице и уходит с каждым запросом генерации
+  let genRef = null;
+  function renderGenRef() {
+    const box = $('#gen-ref');
+    box.querySelectorAll('.photo').forEach(el => el.remove());
+    box.querySelector('.add').hidden = !!genRef;
+    $('#gen-size').disabled = !!genRef;
+    if (!genRef) return;
+    const el = document.createElement('div');
+    el.className = 'photo';
+    el.innerHTML = '<img alt=""><button title="Убрать">×</button>';
+    el.querySelector('img').src = genRef;
+    el.querySelector('button').onclick = () => { genRef = null; renderGenRef(); };
+    box.prepend(el);
+  }
+  async function setGenRef(files) {
+    const file = [...files].find(f => f.type.startsWith('image/'));
+    if (!file) return;
+    try { genRef = await readFile(file); } catch (e) { toast(e.message); }
+    renderGenRef();
+  }
+  $('#gen-ref input').onchange = e => { setGenRef(e.target.files); e.target.value = ''; };
+  $('#gen-ref').ondragover = e => { e.preventDefault(); $('#gen-ref').classList.add('drag'); };
+  $('#gen-ref').ondragleave = () => $('#gen-ref').classList.remove('drag');
+  $('#gen-ref').ondrop = e => { e.preventDefault(); $('#gen-ref').classList.remove('drag'); setGenRef(e.dataTransfer.files); };
+
   $('#gen-run').onclick = () => act(() => {
     const [width, height] = $('#gen-size').value.split('x').map(Number);
     return api('/api/lora/generate', { prompt: $('#gen-prompt').value, lora: $('#gen-lora').value,
-      strength: $('#gen-strength').value === '' ? 1 : +$('#gen-strength').value, nsfw: $('#gen-nsfw').value, skin: $('#gen-skin').value, width, height, count: +$('#gen-count').value });
+      strength: $('#gen-strength').value === '' ? 1 : +$('#gen-strength').value, nsfw: $('#gen-nsfw').value, skin: $('#gen-skin').value,
+      width, height, count: +$('#gen-count').value, ref: genRef });
   });
 
   name = recall('lora-studio-name');
