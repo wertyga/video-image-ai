@@ -10,6 +10,7 @@ ComfyUI запускается сам для генерации и остана�
 генерации, в подпись не попадает), сцены с <image2> или nude/naked - NSFW LoRA (--nsfw-lora).
 Фото фигуры можно сгенерировать в студии по шкалам из training/body_scales.txt и типажам из
 training/body_types.txt (body_candidates/).
+Обученную LoRA можно проверить в студии: картинки по промпту с триггером кладутся в generated/.
 Только вымышленные персонажи, вы сами или взрослые, которые на это согласились.
 """
 import argparse
@@ -38,6 +39,9 @@ from generate import ROOT, add_edit, post, upload_image
 DATASETS = ROOT / "datasets"
 AI_TOOLKIT = ROOT / "ai-toolkit"
 TRAIN_OUTPUT = AI_TOOLKIT / "output"
+LORAS = ROOT / "ComfyUI" / "models" / "loras"
+SKIN_LORA = "qwen21_glamour_realism_v1.safetensors"  # кожа без «пластика», ставится с профилями local-16gb и server
+SKIN_NEGATIVE = "airbrushed, plastic skin, glossy skin"
 PAGE = Path(__file__).with_suffix(".html")
 TEMPLATE_PROMPTS = ROOT / "training" / "character_prompts.txt"
 TEMPLATE_CONFIG = ROOT / "training" / "character_template.yaml"
@@ -63,6 +67,7 @@ NAME = re.compile(r"^[A-Za-z0-9_-]+$")
 PROGRESS = re.compile(r"(\d+)/(\d+) \[")
 MIN_IMAGES = 5
 STEPS = 2000
+SIZES = {(832, 1216), (1216, 832), (1024, 1024)}
 
 args = None
 lock = threading.Lock()
@@ -71,6 +76,7 @@ stop_event = threading.Event()
 job = {"kind": None, "name": None, "status": "", "error": "", "step": 0, "total": 0, "log": [], "started": 0, "durations": []}
 queue = []          # (имя, номер) картинок на генерацию
 body_queue = []     # (имя, промпт, исходная картинка или None) вариантов фигуры
+lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, ширина, высота) картинок с обученной LoRA
 running_item = None
 item_errors = {}    # (имя, номер) -> текст ошибки
 comfy_proc = None   # ComfyUI, запущенный этим сервером
@@ -87,6 +93,7 @@ class Project:
         self.body = self.dir / "body"
         self.candidates = self.dir / "body_candidates"
         self.images = self.dir / "images"
+        self.generated = self.dir / "generated"
 
     def ensure(self):
         self.refs.mkdir(parents=True, exist_ok=True)
@@ -125,6 +132,15 @@ class Project:
     def subject(self):
         prompts = self.prompts()
         return match[1].lower() if prompts and (match := SUBJECT.search(prompts[0])) else "woman"
+
+    def generated_images(self):
+        return sorted(self.generated.glob("*.png")) if self.generated.exists() else []
+
+    def loras(self):
+        """Готовые LoRA из ComfyUI и промежуточные сохранения обучения: имя -> файл."""
+        found = {p.name: p for p in TRAIN_OUTPUT.glob(f"{self.name}_v*/{self.name}_v*.safetensors")}
+        found.update((p.name, p) for p in LORAS.glob(f"{self.name}_v*.safetensors"))
+        return dict(sorted(found.items()))
 
     def image(self, index):
         return self.images / f"{index:03d}.png"
@@ -229,6 +245,30 @@ def generate_body(name, prompt, source):
     next_path(project.candidates, f"{name}_cand").write_bytes(data)
 
 
+def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height):
+    """Проверка обученной LoRA: текст в картинку без референсов, LoRA персонажа после NSFW LoRA,
+    с LoRA кожи - ещё она и CFG 2.5, как советует README."""
+    project = Project(name)
+    workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
+    seed = random.randrange(2**48)
+    workflow["5"]["inputs"]["prompt"] = prompt
+    workflow["2"]["inputs"]["strength_model"] = nsfw
+    workflow["6"]["inputs"].update(width=width, height=height)
+    workflow["30"] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": "Character LoRA"},
+                      "inputs": {"model": ["2", 0], "lora_name": lora, "strength_model": strength}}
+    workflow["7"]["inputs"].update(model=["30", 0], seed=seed)
+    if skin:
+        workflow["31"] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": "Skin LoRA"},
+                          "inputs": {"model": ["30", 0], "lora_name": SKIN_LORA, "strength_model": skin}}
+        workflow["7"]["inputs"].update(model=["31", 0], cfg=2.5)
+        workflow["5"]["inputs"]["negative_prompt"] += ", " + SKIN_NEGATIVE
+    data = wait_image(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
+    path = next_path(project.generated, f"{name}_gen")
+    path.write_bytes(data)
+    info = {"prompt": prompt, "lora": lora, "strength": strength, "nsfw": nsfw, "skin": skin, "seed": seed}
+    path.with_suffix(".json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+
+
 def next_path(folder, prefix):
     folder.mkdir(parents=True, exist_ok=True)
     numbers = [int(m[1]) for p in folder.glob("*.png") if (m := re.search(r"_(\d+)\.png$", p.name))]
@@ -261,20 +301,26 @@ def generation_worker():
                     name, index = running_item = queue.pop(0)
                     job["status"] = f"Генерация фото {index}, в очереди ещё {len(queue)}"
                 elif body_queue:
-                    body_task = running_item = body_queue.pop(0)
-                    name, index = body_task[0], None
+                    task = running_item = body_queue.pop(0)
+                    name, index = task[0], None
+                    run_task, error_key = generate_body, "body"
                     job["status"] = f"Генерация фигуры, в очереди ещё {len(body_queue)}"
+                elif lora_queue:
+                    task = running_item = lora_queue.pop(0)
+                    name, index = task[0], None
+                    run_task, error_key = generate_with_lora, "lora"
+                    job["status"] = f"Генерация с LoRA, в очереди ещё {len(lora_queue)}"
                 else:
                     break
                 job["started"] = time.time()
             if index is None:
                 try:
-                    generate_body(*body_task)
-                    item_errors.pop((name, "body"), None)
+                    run_task(*task)
+                    item_errors.pop((name, error_key), None)
                 except Exception as e:
                     if stop_event.is_set():
                         break
-                    item_errors[(name, "body")] = str(e)
+                    item_errors[(name, error_key)] = str(e)
                 finally:
                     running_item = None
                     finish_item()
@@ -319,6 +365,7 @@ def generation_worker():
         with lock:
             queue.clear()
             body_queue.clear()
+            lora_queue.clear()
             job["kind"] = None
 
 
@@ -408,7 +455,7 @@ def start_job(kind, name, target, *target_args):
     threading.Thread(target=target, args=target_args, daemon=True).start()
 
 
-def enqueue(project, indexes=(), body_tasks=()):
+def enqueue(project, indexes=(), body_tasks=(), lora_tasks=()):
     with lock:
         if job["kind"] == "train":
             raise RuntimeError("Идёт обучение: сначала остановите его")
@@ -422,7 +469,8 @@ def enqueue(project, indexes=(), body_tasks=()):
                 queue.append((project.name, index))
                 job["total"] += 1
         body_queue.extend((project.name, *task) for task in body_tasks)
-        job["total"] += len(body_tasks)
+        lora_queue.extend((project.name, *task) for task in lora_tasks)
+        job["total"] += len(body_tasks) + len(lora_tasks)
     if not busy:
         start_job("generate", project.name, generation_worker)
 
@@ -432,6 +480,7 @@ def stop():
     with lock:
         queue.clear()
         body_queue.clear()
+        lora_queue.clear()
         kind = job["kind"]
     if kind == "generate" and comfy_alive():
         urllib.request.urlopen(urllib.request.Request(f"{args.host}/interrupt", data=b"", method="POST")).close()
@@ -473,6 +522,7 @@ def state(name):
                           "elapsed": time.time() - job["started"] if job["kind"] == "generate" else 0}}
         queued, running = list(queue), running_item
         body_pending = sum(t[0] == name for t in body_queue) + (len(running or ()) == 3 and running[0] == name)
+        lora_pending = sum(t[0] == name for t in lora_queue) + (len(running or ()) == 8 and running[0] == name)
     if not name:
         return result
     project = Project(name)
@@ -486,13 +536,20 @@ def state(name):
                       "image": file_url(image) if image.exists() else None})
     runs = sorted(TRAIN_OUTPUT.glob(f"{name}_v*"), key=lambda p: p.stat().st_mtime) if TRAIN_OUTPUT.exists() else []
     samples = sorted((runs[-1] / "samples").glob("*.jpg"))[-6:] if runs else []
-    loras = sorted((ROOT / "ComfyUI" / "models" / "loras").glob(f"{name}_v*.safetensors"))
+    loras = sorted(LORAS.glob(f"{name}_v*.safetensors"))
+    generated = []
+    for p in reversed(project.generated_images()[-48:]):
+        info = p.with_suffix(".json")
+        generated.append({"file": p.name, "url": file_url(p),
+                          **(json.loads(info.read_text(encoding="utf-8")) if info.exists() else {})})
     result.update(name=name, trigger=project.trigger(), body_description=project.body_description(), items=items,
                   photos=[{"file": p.name, "url": file_url(p)} for p in project.photos()],
                   body=[{"file": p.name, "url": file_url(p)} for p in project.body_photos()],
                   candidates=[{"file": p.name, "url": file_url(p)} for p in project.body_candidates()],
                   body_pending=body_pending, body_error=item_errors.get((name, "body"), ""),
-                  samples=[file_url(p) for p in samples], loras=[p.name for p in loras])
+                  samples=[file_url(p) for p in samples], loras=[p.name for p in loras],
+                  all_loras=list(project.loras()), generated=generated, lora_pending=lora_pending,
+                  lora_error=item_errors.get((name, "lora"), ""))
     return result
 
 
@@ -597,6 +654,30 @@ def handle_post(path, body):
         candidate = project.candidates / Path(body["file"]).name
         if candidate.exists():
             candidate.unlink()
+    elif path == "/api/lora/generate":
+        prompt = " ".join(body["prompt"].split())
+        if not prompt:
+            raise ValueError("Введите промпт")
+        source = project.loras().get(body.get("lora", ""))
+        if not source:
+            raise ValueError("Выберите LoRA")
+        size = (int(body["width"]), int(body["height"]))
+        if size not in SIZES:
+            raise ValueError("Недопустимый размер")
+        if source.parent != LORAS:  # промежуточное сохранение обучения: ComfyUI видит только свою папку
+            shutil.copy2(source, LORAS / source.name)
+        nsfw = body.get("nsfw")
+        if nsfw in (None, ""):
+            nsfw = args.nsfw_lora if NUDE.search(prompt) else args.lora
+        skin = float(body.get("skin") or 0)
+        if skin and not (LORAS / SKIN_LORA).exists():
+            raise ValueError(f"Нет LoRA кожи ComfyUI/models/loras/{SKIN_LORA}: скачайте профилем setup")
+        task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, *size)
+        enqueue(project, lora_tasks=[task] * min(int(body.get("count", 1)), 8))
+    elif path == "/api/lora/delete":
+        image = project.generated / Path(body["file"]).name
+        image.unlink(missing_ok=True)
+        image.with_suffix(".json").unlink(missing_ok=True)
     elif path == "/api/stop":
         stop()
     else:
