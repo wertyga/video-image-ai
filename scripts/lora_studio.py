@@ -34,7 +34,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from generate import ROOT, add_edit, post, upload_image
+from generate import ROOT, add_edit, add_img2img, post, upload_image
 
 DATASETS = ROOT / "datasets"
 AI_TOOLKIT = ROOT / "ai-toolkit"
@@ -76,8 +76,8 @@ stop_event = threading.Event()
 job = {"kind": None, "name": None, "status": "", "error": "", "step": 0, "total": 0, "log": [], "started": 0, "durations": []}
 queue = []          # (имя, номер) картинок на генерацию
 body_queue = []     # (имя, промпт, исходная картинка или None) вариантов фигуры
-lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, ширина, высота, референс или None)
-                    # картинок с обученной LoRA
+lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, ширина, высота, референс или None,
+                    # denoise для img2img или None для edit) картинок с обученной LoRA
 running_item = None
 item_errors = {}    # (имя, номер) -> текст ошибки
 comfy_proc = None   # ComfyUI, запущенный этим сервером
@@ -247,15 +247,18 @@ def generate_body(name, prompt, source):
     next_path(project.candidates, f"{name}_cand").write_bytes(data)
 
 
-def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, ref):
+def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, ref, denoise):
     """Проверка обученной LoRA: LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README.
-    Без референса - текст в картинку, с референсом - режим edit (<image1>, размер картинки референса)."""
+    Без референса - текст в картинку. С референсом и denoise - img2img: лицо рисует LoRA, как при обучении;
+    без denoise - режим edit (<image1>), модель видит референс и тянет с него и лицо. Размер - с референса."""
     project = Project(name)
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     seed = random.randrange(2**48)
     workflow["5"]["inputs"]["prompt"] = prompt
     workflow["2"]["inputs"]["strength_model"] = nsfw
-    if ref:
+    if ref and denoise is not None:
+        add_img2img(workflow, upload_image(args.host, project.gen_refs / ref), denoise)
+    elif ref:
         add_edit(workflow, [upload_image(args.host, project.gen_refs / ref)])
     else:
         workflow["6"]["inputs"].update(width=width, height=height)
@@ -270,7 +273,8 @@ def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, 
     data = wait_image(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
     path = next_path(project.generated, f"{name}_gen")
     path.write_bytes(data)
-    info = {"prompt": prompt, "lora": lora, "strength": strength, "nsfw": nsfw, "skin": skin, "seed": seed, "ref": ref}
+    info = {"prompt": prompt, "lora": lora, "strength": strength, "nsfw": nsfw, "skin": skin, "seed": seed, "ref": ref,
+            "denoise": denoise}
     path.with_suffix(".json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
 
 
@@ -527,7 +531,7 @@ def state(name):
                           "elapsed": time.time() - job["started"] if job["kind"] == "generate" else 0}}
         queued, running = list(queue), running_item
         body_pending = sum(t[0] == name for t in body_queue) + (len(running or ()) == 3 and running[0] == name)
-        lora_pending = sum(t[0] == name for t in lora_queue) + (len(running or ()) == 9 and running[0] == name)
+        lora_pending = sum(t[0] == name for t in lora_queue) + (len(running or ()) == 10 and running[0] == name)
     if not name:
         return result
     project = Project(name)
@@ -685,7 +689,12 @@ def handle_post(path, body):
             path = next_path(project.gen_refs, f"{project.name}_genref")
             decode_image(body["ref"]).save(path)
             ref = path.name
-        task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, *size, ref)
+        denoise = None
+        if ref and body.get("mode") != "edit":
+            denoise = float(body.get("denoise") or 0.65)
+            if not 0 < denoise <= 1:
+                raise ValueError("Сила перерисовки: от 0 до 1")
+        task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, *size, ref, denoise)
         enqueue(project, lora_tasks=[task] * min(int(body.get("count", 1)), 8))
     elif path == "/api/lora/delete":
         image = project.generated / Path(body["file"]).name

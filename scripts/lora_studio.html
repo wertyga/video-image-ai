@@ -43,7 +43,7 @@
   .add { width: 100px; height: 100px; display: grid; place-items: center; text-align: center; font-size: 13px; color: var(--muted);
     border: 1px solid var(--line); border-radius: 8px; cursor: pointer; padding: 6px; }
   .add:hover { border-color: var(--accent); color: var(--accent); }
-  .add input, .add[hidden] { display: none; }
+  .add input, .add[hidden], .fields[hidden], label.field[hidden] { display: none; }
 
   .candidates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
   .cand { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
@@ -188,8 +188,18 @@
     <div class="photos" id="gen-ref">
       <label class="add">+ Картинка<br>или перетащить сюда<input type="file" accept="image/*"></label>
     </div>
-    <div class="hint">Картинка становится <b>&lt;image1&gt;</b>, размер берётся с неё. Например: <b>Replace the woman in &lt;image1&gt;
-      with nst woman, keep the exact pose, outfit, background and lighting of &lt;image1&gt;</b>.</div>
+    <div class="fields" id="gen-ref-fields" style="margin:12px 0 0">
+      <label class="field">Режим
+        <select id="gen-mode"><option value="img2img">img2img — перерисовка, лицо от LoRA</option>
+          <option value="edit">edit — модель видит картинку как &lt;image1&gt;</option></select>
+      </label>
+      <label class="field" id="gen-denoise-field">Сила перерисовки
+        <input type="number" id="gen-denoise" min="0.05" max="1" step="0.05" value="0.65">
+        <div class="hint">0.55–0.7: композиция с картинки, лицо своё. Лицо чужое — выше, поза плывёт — ниже</div>
+      </label>
+    </div>
+    <div class="hint">Размер берётся с картинки. В img2img промпт обычный, с ключевым словом, без &lt;image1&gt;.
+      В edit: <b>Replace the woman in &lt;image1&gt; with nst woman, keep the pose, background and lighting</b> — но лицо тянется с картинки.</div>
     <div class="gen-fields">
       <label class="field">LoRA
         <select id="gen-lora"></select>
@@ -508,7 +518,7 @@
       if (g.ref_url) {
         const a = document.createElement('a');
         a.href = g.ref_url; a.target = '_blank'; a.textContent = 'референс';
-        el.querySelector('.info').append(' · ', a);
+        el.querySelector('.info').append(g.denoise ? ` · img2img ${g.denoise}, ` : ' · edit, ', a);
       }
       el.querySelector('.again').disabled = !g.prompt;
       el.querySelector('.again').onclick = () => {
@@ -645,6 +655,8 @@
     box.querySelectorAll('.photo').forEach(el => el.remove());
     box.querySelector('.add').hidden = !!genRef;
     $('#gen-size').disabled = !!genRef;
+    $('#gen-ref-fields').hidden = !genRef;
+    $('#gen-denoise-field').hidden = $('#gen-mode').value !== 'img2img';
     if (!genRef) return;
     const el = document.createElement('div');
     el.className = 'photo';
@@ -659,6 +671,13 @@
     try { genRef = await readFile(file); } catch (e) { toast(e.message); }
     renderGenRef();
   }
+  ['mode', 'denoise'].forEach(field => {
+    const el = $('#gen-' + field);
+    const saved = recall('lora-studio-gen-' + field);
+    if (saved) el.value = saved;
+    el.onchange = el.oninput = () => { remember('lora-studio-gen-' + field, el.value); renderGenRef(); };
+  });
+  renderGenRef();
   $('#gen-ref input').onchange = e => { setGenRef(e.target.files); e.target.value = ''; };
   $('#gen-ref').ondragover = e => { e.preventDefault(); $('#gen-ref').classList.add('drag'); };
   $('#gen-ref').ondragleave = () => $('#gen-ref').classList.remove('drag');
@@ -668,7 +687,7 @@
     const [width, height] = $('#gen-size').value.split('x').map(Number);
     return api('/api/lora/generate', { prompt: $('#gen-prompt').value, lora: $('#gen-lora').value,
       strength: $('#gen-strength').value === '' ? 1 : +$('#gen-strength').value, nsfw: $('#gen-nsfw').value, skin: $('#gen-skin').value,
-      width, height, count: +$('#gen-count').value, ref: genRef });
+      width, height, count: +$('#gen-count').value, ref: genRef, mode: $('#gen-mode').value, denoise: $('#gen-denoise').value });
   });
 
   name = recall('lora-studio-name');
