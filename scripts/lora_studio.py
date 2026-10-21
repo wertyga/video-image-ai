@@ -32,7 +32,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 from generate import ROOT, add_edit, add_img2img, post, upload_image
 
@@ -68,6 +68,8 @@ PROGRESS = re.compile(r"(\d+)/(\d+) \[")
 MIN_IMAGES = 5
 STEPS = 2000
 SIZES = {(832, 1216), (1216, 832), (1024, 1024)}
+FACE_MARGIN = 2.2   # кроп лица для доработки во столько раз больше найденного лица: с волосами и шеей
+FACE_DENOISE = 0.45 # выше - черты LoRA сильнее, но лицо может не совпасть по свету и повороту с картинкой
 
 args = None
 lock = threading.Lock()
@@ -78,6 +80,7 @@ queue = []          # (имя, номер) картинок на генерац�
 body_queue = []     # (имя, промпт, исходная картинка или None) вариантов фигуры
 lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, ширина, высота, референс или None,
                     # denoise для img2img или None для edit) картинок с обученной LoRA
+face_queue = []     # (имя, файл из generated/) картинок на доработку лица
 running_item = None
 item_errors = {}    # (имя, номер) -> текст ошибки
 comfy_proc = None   # ComfyUI, запущенный этим сервером
@@ -247,21 +250,12 @@ def generate_body(name, prompt, source):
     next_path(project.candidates, f"{name}_cand").write_bytes(data)
 
 
-def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, ref, denoise):
-    """Проверка обученной LoRA: LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README.
-    Без референса - текст в картинку. С референсом и denoise - img2img: лицо рисует LoRA, как при обучении;
-    без denoise - режим edit (<image1>), модель видит референс и тянет с него и лицо. Размер - с референса."""
-    project = Project(name)
+def lora_workflow(prompt, lora, strength, nsfw, skin):
+    """Workflow с LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README."""
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     seed = random.randrange(2**48)
     workflow["5"]["inputs"]["prompt"] = prompt
     workflow["2"]["inputs"]["strength_model"] = nsfw
-    if ref and denoise is not None:
-        add_img2img(workflow, upload_image(args.host, project.gen_refs / ref), denoise)
-    elif ref:
-        add_edit(workflow, [upload_image(args.host, project.gen_refs / ref)])
-    else:
-        workflow["6"]["inputs"].update(width=width, height=height)
     workflow["30"] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": "Character LoRA"},
                       "inputs": {"model": ["2", 0], "lora_name": lora, "strength_model": strength}}
     workflow["7"]["inputs"].update(model=["30", 0], seed=seed)
@@ -270,6 +264,72 @@ def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, 
                           "inputs": {"model": ["30", 0], "lora_name": SKIN_LORA, "strength_model": skin}}
         workflow["7"]["inputs"].update(model=["31", 0], cfg=2.5)
         workflow["5"]["inputs"]["negative_prompt"] += ", " + SKIN_NEGATIVE
+    return workflow, seed
+
+
+def find_face(image):
+    """Самое крупное лицо анфас: (x, y, ширина, высота) или None."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        raise RuntimeError("Для доработки лица нужен OpenCV: pip install opencv-python")
+    gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+    detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    faces = detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    return max(faces, key=lambda f: f[2] * f[3]) if len(faces) else None
+
+
+def fix_face(name, file):
+    """Как ADetailer: лицо вырезается с запасом на волосы, увеличивается до 1024, перерисовывается img2img
+    только LoRA персонажа (мелкое лицо и NSFW LoRA перебивают её черты) и вставляется обратно с мягким краем."""
+    project = Project(name)
+    source = project.generated / file
+    info_path = source.with_suffix(".json")
+    info = json.loads(info_path.read_text(encoding="utf-8")) if info_path.exists() else {}
+    if not info.get("lora"):
+        raise RuntimeError("Неизвестно, с какой LoRA сделана картинка")
+    image = Image.open(source).convert("RGB")
+    face = find_face(image)
+    if face is None:
+        raise RuntimeError("Лицо не найдено: доработка работает с лицом анфас или в три четверти")
+    x, y, w, h = map(int, face)
+    side = min(int(max(w, h) * FACE_MARGIN), *image.size)
+    left = min(max(x + w // 2 - side // 2, 0), image.width - side)
+    top = min(max(y + h // 2 - side // 2, 0), image.height - side)
+    box = (left, top, left + side, top + side)
+    crop_path = next_path(project.gen_refs, f"{name}_face")
+    image.crop(box).resize((1024, 1024), Image.LANCZOS).save(crop_path)
+
+    subject = project.trigger() or "the woman"
+    prompt = f"Close-up portrait photograph of {subject}, face in sharp focus, natural skin texture, photorealistic."
+    workflow, seed = lora_workflow(prompt, info["lora"], info.get("strength", 1.0), 0, info.get("skin", 0))
+    add_img2img(workflow, upload_image(args.host, crop_path), FACE_DENOISE)
+    data = wait_image(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
+
+    face_image = Image.open(io.BytesIO(data)).convert("RGB").resize((side, side), Image.LANCZOS)
+    mask = Image.new("L", (side, side), 0)
+    inset = side // 8
+    ImageDraw.Draw(mask).rectangle((inset, inset, side - inset, side - inset), fill=255)
+    image.paste(face_image, box[:2], mask.filter(ImageFilter.GaussianBlur(inset / 2)))
+    path = next_path(project.generated, f"{name}_gen")
+    image.save(path)
+    info.update(face_fix=FACE_DENOISE, face_from=file, face_seed=seed)
+    path.with_suffix(".json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+
+
+def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, ref, denoise):
+    """Проверка обученной LoRA: LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README.
+    Без референса - текст в картинку. С референсом и denoise - img2img: лицо рисует LoRA, как при обучении;
+    без denoise - режим edit (<image1>), модель видит референс и тянет с него и лицо. Размер - с референса."""
+    project = Project(name)
+    workflow, seed = lora_workflow(prompt, lora, strength, nsfw, skin)
+    if ref and denoise is not None:
+        add_img2img(workflow, upload_image(args.host, project.gen_refs / ref), denoise)
+    elif ref:
+        add_edit(workflow, [upload_image(args.host, project.gen_refs / ref)])
+    else:
+        workflow["6"]["inputs"].update(width=width, height=height)
     data = wait_image(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
     path = next_path(project.generated, f"{name}_gen")
     path.write_bytes(data)
@@ -319,6 +379,11 @@ def generation_worker():
                     name, index = task[0], None
                     run_task, error_key = generate_with_lora, "lora"
                     job["status"] = f"Генерация с LoRA, в очереди ещё {len(lora_queue)}"
+                elif face_queue:
+                    task = running_item = face_queue.pop(0)
+                    name, index = task[0], None
+                    run_task, error_key = fix_face, "lora"
+                    job["status"] = f"Доработка лица, в очереди ещё {len(face_queue)}"
                 else:
                     break
                 job["started"] = time.time()
@@ -375,6 +440,7 @@ def generation_worker():
             queue.clear()
             body_queue.clear()
             lora_queue.clear()
+            face_queue.clear()
             job["kind"] = None
 
 
@@ -464,7 +530,7 @@ def start_job(kind, name, target, *target_args):
     threading.Thread(target=target, args=target_args, daemon=True).start()
 
 
-def enqueue(project, indexes=(), body_tasks=(), lora_tasks=()):
+def enqueue(project, indexes=(), body_tasks=(), lora_tasks=(), face_files=()):
     with lock:
         if job["kind"] == "train":
             raise RuntimeError("Идёт обучение: сначала остановите его")
@@ -479,7 +545,8 @@ def enqueue(project, indexes=(), body_tasks=(), lora_tasks=()):
                 job["total"] += 1
         body_queue.extend((project.name, *task) for task in body_tasks)
         lora_queue.extend((project.name, *task) for task in lora_tasks)
-        job["total"] += len(body_tasks) + len(lora_tasks)
+        face_queue.extend((project.name, file) for file in face_files)
+        job["total"] += len(body_tasks) + len(lora_tasks) + len(face_files)
     if not busy:
         start_job("generate", project.name, generation_worker)
 
@@ -490,6 +557,7 @@ def stop():
         queue.clear()
         body_queue.clear()
         lora_queue.clear()
+        face_queue.clear()
         kind = job["kind"]
     if kind == "generate" and comfy_alive():
         urllib.request.urlopen(urllib.request.Request(f"{args.host}/interrupt", data=b"", method="POST")).close()
@@ -531,7 +599,9 @@ def state(name):
                           "elapsed": time.time() - job["started"] if job["kind"] == "generate" else 0}}
         queued, running = list(queue), running_item
         body_pending = sum(t[0] == name for t in body_queue) + (len(running or ()) == 3 and running[0] == name)
-        lora_pending = sum(t[0] == name for t in lora_queue) + (len(running or ()) == 10 and running[0] == name)
+        # running_item доработки лица - (имя, файл), у фото датасета на этом месте номер
+        lora_pending = (sum(t[0] == name for t in lora_queue + face_queue) + (len(running or ()) == 10 and running[0] == name)
+                        + (len(running or ()) == 2 and isinstance(running[1], str) and running[0] == name))
     if not name:
         return result
     project = Project(name)
@@ -696,6 +766,10 @@ def handle_post(path, body):
                 raise ValueError("Сила перерисовки: от 0 до 1")
         task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, *size, ref, denoise)
         enqueue(project, lora_tasks=[task] * min(int(body.get("count", 1)), 8))
+    elif path == "/api/lora/face":
+        if not (project.generated / Path(body["file"]).name).exists():
+            raise LookupError(body["file"])
+        enqueue(project, face_files=[Path(body["file"]).name])
     elif path == "/api/lora/delete":
         image = project.generated / Path(body["file"]).name
         image.unlink(missing_ok=True)

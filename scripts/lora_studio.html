@@ -509,7 +509,8 @@
       const el = document.createElement('div');
       el.className = 'cand gen';
       el.innerHTML = '<div class="pic"><a target="_blank"><img alt=""></a></div><div class="info"></div><div class="actions">' +
-        '<button class="again">Промпт</button><button class="del" title="Удалить">×</button></div>';
+        '<button class="again">Промпт</button><button class="face" title="Перерисовать лицо крупно только LoRA персонажа">Лицо</button>' +
+        '<button class="del" title="Удалить">×</button></div>';
       el.querySelector('a').href = g.url;
       el.querySelector('img').src = g.url;
       el.querySelector('img').title = g.prompt || '';
@@ -520,6 +521,9 @@
         a.href = g.ref_url; a.target = '_blank'; a.textContent = 'референс';
         el.querySelector('.info').append(g.denoise ? ` · img2img ${g.denoise}, ` : ' · edit, ', a);
       }
+      if (g.face_fix) el.querySelector('.info').append(` · лицо ${g.face_fix} из ${g.face_from.replace(/\.png$/, '')}`);
+      el.querySelector('.face').disabled = !g.lora;
+      el.querySelector('.face').onclick = () => act(() => api('/api/lora/face', { file: g.file }));
       el.querySelector('.again').disabled = !g.prompt;
       el.querySelector('.again').onclick = () => {
         $('#gen-prompt').value = g.prompt;
