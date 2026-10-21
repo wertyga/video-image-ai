@@ -57,6 +57,8 @@ BODY_VIEWS = ["standing in strict left profile, arms relaxed",
 SUBJECT = re.compile(r"the (woman|man|person) from <image1>(?: with the body from <image2>)?", re.IGNORECASE)
 NUDE = re.compile(r"\b(nude|naked|topless)\b", re.IGNORECASE)
 BEHIND = re.compile(r"\b(from behind|back view|rear view)\b", re.IGNORECASE)
+CLOTHED_PROMPT = "fully clothed, her clothes fully cover her chest"
+CLOTHED_NEGATIVE ="nudity, nude, topless, exposed breasts, nipples, nip slip, see-through clothing"
 NAME = re.compile(r"^[A-Za-z0-9_-]+$")
 PROGRESS = re.compile(r"(\d+)/(\d+) \[")
 MIN_IMAGES = 5
@@ -199,8 +201,16 @@ def render(prompt, ref_names=()):
     """Картинка по промпту: с референсами - режим edit, без - текст в картинку 832x1216."""
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     workflow["5"]["inputs"]["prompt"] = prompt
-    # базовая модель плохо рисует обнажённое тело, а без NSFW LoRA одетой рисует свою худую фигуру вместо <image2>
-    workflow["2"]["inputs"]["strength_model"] = args.nsfw_lora if NUDE.search(prompt) or "<image2>" in prompt else args.lora
+    # базовая модель плохо рисует обнажённое тело, а без NSFW LoRA одетой рисует свою худую фигуру вместо <image2>;
+    # на полной силе одетая сцена с голым фото фигуры выходит с открытой грудью - LoRA слабее и нагота в негативе
+    if NUDE.search(prompt):
+        strength = args.nsfw_lora
+    elif "<image2>" in prompt:
+        strength = args.clothed_lora
+        workflow["5"]["inputs"]["negative_prompt"] += ", " + CLOTHED_NEGATIVE
+    else:
+        strength = args.lora
+    workflow["2"]["inputs"]["strength_model"] = strength
     workflow["7"]["inputs"]["seed"] = random.randrange(2**48)
     if ref_names:
         add_edit(workflow, list(ref_names))
@@ -287,6 +297,9 @@ def generation_worker():
                     # получала вид со спины, и модель придумывала грудь сама
                     refs.append(bodies[-1] if BEHIND.search(prompt) else bodies[0])
                     # фото фигуры плохо переносит пропорции на одетое тело и вид сбоку: помогает текст
+                    # голое фото фигуры переносит наготу на одетую сцену, одного негатива мало
+                    if not NUDE.search(prompt):
+                        prompt = f"{prompt.rstrip('. ')}, {CLOTHED_PROMPT}"
                     if description := project.body_description():
                         prompt = f"{prompt.rstrip('. ')}, {description.rstrip('. ')}."
                 generate_image(project, index, prompt, refs)
@@ -644,6 +657,7 @@ def main():
     parser.add_argument("--profile", default="local", choices=["local", "server"])
     parser.add_argument("--lora", type=float, default=0.0, help="NSFW LoRA при генерации датасета, по умолчанию выключен")
     parser.add_argument("--nsfw-lora", type=float, default=0.9, help="NSFW LoRA для сцен с nude/naked в промпте")
+    parser.add_argument("--clothed-lora", type=float, default=0.5, help="NSFW LoRA для одетых сцен с фото фигуры <image2>")
     parser.add_argument("--host", default="http://127.0.0.1:8188", help="адрес ComfyUI")
     parser.add_argument("--port", type=int, default=8190)
     args = parser.parse_args()
