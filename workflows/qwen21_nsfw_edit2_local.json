@@ -52,19 +52,35 @@
       ],
       "prompt": "The person in <image1> wearing the outfit from <image2>, keep the face and hairstyle from <image1>.",
       "negative_prompt": "blurry, lowres, deformed anatomy, extra fingers, watermark, text",
-      "resolution": 1024,
+      "resolution": 0,
       "vae": [
         "4",
         0
       ],
       "images.image_1": [
-        "20",
+        "6",
         0
       ],
       "images.image_2": [
-        "21",
+        "22",
         0
       ]
+    }
+  },
+  "6": {
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Size"
+    },
+    "inputs": {
+      "image": [
+        "20",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 832,
+      "height": 1216,
+      "crop": "center"
     }
   },
   "7": {
@@ -136,6 +152,21 @@
     },
     "inputs": {
       "image": "example.png"
+    }
+  },
+  "22": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Reference size"
+    },
+    "inputs": {
+      "image": [
+        "21",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 32
     }
   }
 }

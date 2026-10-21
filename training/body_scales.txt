@@ -1,0 +1,28 @@
+# Шкалы генератора фигуры: [Шкала] ступень: фраза для промпта. В шкале выбирается одна ступень.
+[Сложение] миниатюрное: petite small-framed build
+[Сложение] стройное: slim build
+[Сложение] спортивное: toned athletic build
+[Сложение] с формами: curvy build
+[Сложение] полное: plus-size full-figured build
+[Грудь] S: small breasts
+[Грудь] M: medium breasts
+[Грудь] L: large full breasts
+[Грудь] XL: very large heavy breasts
+[Талия] очень тонкая: very narrow waist
+[Талия] тонкая: narrow waist
+[Талия] обычная: average waist
+[Бёдра] узкие: narrow hips
+[Бёдра] средние: average hips
+[Бёдра] широкие: wide hips
+[Бёдра] очень широкие: very wide hips
+[Ягодицы] маленькие: small flat buttocks
+[Ягодицы] округлые: round buttocks
+[Ягодицы] большие: large round buttocks
+[Ягодицы] очень большие: very large buttocks
+[Ноги] короткие: short legs
+[Ноги] средние: average-length legs
+[Ноги] длинные: long legs
+[Кожа] светлая: fair pale skin
+[Кожа] оливковая: olive skin
+[Кожа] загорелая: tanned skin
+[Кожа] смуглая: dark brown skin

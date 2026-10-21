@@ -1,0 +1,66 @@
+# Шаблон конфига LoRA персонажа для Qwen Image 2.1 (ai-toolkit), 16 ГБ VRAM.
+# Его заполняет scripts/lora_studio.py: подставляет имя запуска, папку датасета, триггер и число шагов.
+job: extension
+config:
+  name: "nastiya_v2"
+  process:
+    - type: "sd_trainer"
+      training_folder: "output"   # внутри ai-toolkit/
+      device: cuda:0
+      trigger_word: "nst woman"
+      network:
+        type: "lora"
+        linear: 16
+        linear_alpha: 16
+      save:
+        dtype: float16
+        save_every: 250
+        max_step_saves_to_keep: 8
+      datasets:
+        - folder_path: "../datasets/nastiya/images"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [512, 768]
+      train:
+        batch_size: 1
+        cache_text_embeddings: true
+        steps: 2000
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "flowmatch"
+        timestep_type: "shift"
+        optimizer: "adamw8bit"
+        lr: 1e-4
+        dtype: bf16
+      model:
+        # файлы берутся из ComfyUI/models (MODELS_PATH задаёт train_lora-скрипт)
+        name_or_path: "Comfy-Org/Qwen-Image-2.1"
+        arch: "qwen_image_2"
+        quantize: true
+        qtype: "convrot8"
+        quantize_te: true
+        qtype_te: "convrot8"
+        low_vram: true
+        model_kwargs:
+          rgba: false
+      sample:
+        sampler: "flowmatch"
+        sample_every: 250
+        width: 768
+        height: 1024
+        prompts:
+          - "photo of nst woman sitting in a cafe by the window, soft daylight"
+          - "photo of nst woman in a black leather jacket on a city street at night, neon light"
+          - "close-up portrait of nst woman smiling, golden hour backlight"
+        neg: ""
+        seed: 42
+        walk_seed: true
+        guidance_scale: 3
+        sample_steps: 25
+meta:
+  name: "[name]"
+  version: "1.0"

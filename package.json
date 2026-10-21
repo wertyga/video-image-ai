@@ -1,0 +1,16 @@
+{
+  "name": "adultai",
+  "private": true,
+  "description": "Запуск ComfyUI, LoRA-студии, датасетов и API через npm run",
+  "scripts": {
+    "comfy": "node scripts/py.mjs ComfyUI/main.py --output-directory output",
+    "studio": "node scripts/py.mjs scripts/lora_studio.py",
+    "dataset": "node scripts/py.mjs scripts/make_dataset.py",
+    "sheet": "node scripts/py.mjs scripts/contact_sheet.py",
+    "generate": "node scripts/py.mjs scripts/generate.py",
+    "video": "node scripts/py.mjs scripts/generate_video.py",
+    "train": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/train_lora.ps1",
+    "api": "npm --prefix api run start:dev",
+    "api:test": "npm --prefix api test"
+  }
+}

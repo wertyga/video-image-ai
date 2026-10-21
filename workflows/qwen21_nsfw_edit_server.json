@@ -52,15 +52,31 @@
       ],
       "prompt": "Change the outfit of the person in <image1> to ..., keep the face, pose and background unchanged.",
       "negative_prompt": "blurry, lowres, deformed anatomy, extra fingers, watermark, text",
-      "resolution": 1024,
+      "resolution": 0,
       "vae": [
         "4",
         0
       ],
       "images.image_1": [
-        "20",
+        "6",
         0
       ]
+    }
+  },
+  "6": {
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Size"
+    },
+    "inputs": {
+      "image": [
+        "20",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 832,
+      "height": 1216,
+      "crop": "center"
     }
   },
   "7": {

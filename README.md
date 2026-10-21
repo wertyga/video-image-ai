@@ -29,6 +29,26 @@ MiniMax H3 + [NSFW Unlocked LoRA v2](https://civitai.com/models/2925727) для 
 - Linux: `./scripts/run.sh`, затем с локального компа `ssh -L 8188:127.0.0.1:8188 user@server` и открыть http://127.0.0.1:8188.
   Не запускайте с `--listen 0.0.0.0` на публичном IP: у ComfyUI нет авторизации.
 
+То же через npm (из корня проекта, аргументы после `--`):
+
+```
+npm run comfy                                   # ComfyUI, http://127.0.0.1:8188
+npm run studio                                  # LoRA-студия, http://127.0.0.1:8190
+npm run dataset -- datasets/auburn_freckles     # make_dataset.py
+npm run sheet -- datasets/auburn_freckles/images sheet.jpg
+npm run generate -- -p "..." --count 4
+npm run video -- -p "..." --seconds 5
+npm run train -- training/auburn_freckles.yaml  # только Windows, на Linux ./scripts/train_lora.sh
+npm run api                                     # api/ в режиме разработки
+```
+
+Кожа без «пластика»: LoRA [Glamour Realism](https://civitai.com/models/2986100) (ставится с профилями
+`local-16gb` и `server`) на 0.5–0.7, `--cfg 2.5`, размер около 1 Мп, в промпте `natural skin texture, visible pores`,
+в негативе `airbrushed, plastic skin, glossy skin`:
+```
+npm run generate -- --cfg 2.5 --extra-lora qwen21_glamour_realism_v1.safetensors:0.6 -p "..." -n "airbrushed, plastic skin, glossy skin, ..."
+```
+
 В интерфейсе: перетащить `workflows/qwen21_nsfw_local.json` (или `_server.json`) в окно ComfyUI.
 
 Без браузера (ComfyUI должен быть запущен):
@@ -47,6 +67,8 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
   python scripts/generate.py --image in.png -p "Change the outfit of the person in <image1> to a red dress, keep the face and pose unchanged."
   ```
   В интерфейсе: `workflows/qwen21_nsfw_edit_local.json` (или `_server.json`), картинку выбрать в узле «Input image».
+  Размер результата — в узле «Size» (по умолчанию 832×1216): картинка обрезается по центру и масштабируется
+  под него. Чтобы оставить пропорции исходника, впишите размер с теми же пропорциями.
 
   До 16 картинок: `<image1>` редактируется (и задаёт размер результата), остальные служат образцами.
   ```
@@ -200,5 +222,16 @@ curl -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/js
    Промежуточные LoRA и тестовые картинки каждые 250 шагов: `ai-toolkit/output/<name>/`.
 4. Выбранный `.safetensors` скопировать в `ComfyUI/models/loras` и подключить вторым LoraLoaderModelOnly
    (или вместо NSFW LoRA). В промпте писать триггер: `photo of ohwx woman ...`.
+
+То же в браузере:
+```
+python scripts/lora_studio.py        # http://127.0.0.1:8190
+```
+Имя персонажа, ключевое слово, загрузка фото, «Сгенерировать фото» (сцены из `training/character_prompts.txt`),
+у каждого фото правка промпта и «Перегенерировать», «Начать обучение» / «Остановить» с прогрессом, логом и
+тестовыми картинками. ComfyUI для генерации запускается сам и останавливается перед обучением; запущенный вручную
+нужно закрыть. Настройки обучения — `training/character_template.yaml`. Остановленное обучение продолжается
+с последнего сохранения, после законченного следующий запуск создаёт `<имя>_v2`. Итог копируется в
+`ComfyUI/models/loras/<имя>_v1.safetensors`.
 
 Только вымышленные персонажи, вы сами или взрослые, которые на это согласились.

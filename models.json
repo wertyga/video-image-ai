@@ -6,7 +6,8 @@
         "unet_int8",
         "te_int8",
         "vae",
-        "lora_nsfw_v2"
+        "lora_nsfw_v2",
+        "lora_glamour_realism"
       ]
     },
     "server": {
@@ -15,7 +16,8 @@
         "unet_bf16",
         "te_bf16",
         "vae",
-        "lora_nsfw_v2"
+        "lora_nsfw_v2",
+        "lora_glamour_realism"
       ]
     },
     "h3-server": {
@@ -68,6 +70,12 @@
       "url": "https://civitai.com/api/download/models/3357315?fileId=3244894",
       "dir": "loras",
       "name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "auth": "civitai"
+    },
+    "lora_glamour_realism": {
+      "url": "https://civitai.com/api/download/models/3385496?fileId=3274312",
+      "dir": "loras",
+      "name": "qwen21_glamour_realism_v1.safetensors",
       "auth": "civitai"
     },
     "h3_unet_int8": {

@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoRA персонажа</title>
+<style>
+  :root {
+    --bg: #f5f4f1; --card: #fff; --text: #1d1d1f; --muted: #6d6d73; --line: #dcd9d2; --field: #fff;
+    --accent: #3a6ed6; --accent-text: #fff; --danger: #c93c3c; --ok: #2f8f5b; --warn: #c2771b; --ph: #ebe9e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416; --card: #1e1e21; --text: #ececee; --muted: #9b9ba3; --line: #34343a; --field: #17171a;
+      --accent: #6f9cf5; --accent-text: #0e1320; --danger: #ef6b6b; --ok: #5cc48a; --warn: #e5a050; --ph: #2a2a2e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 18px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label.field { display: block; font-size: 13px; color: var(--muted); }
+  input[type=text], textarea, select { width: 100%; margin-top: 4px; padding: 8px 10px; font: inherit; color: var(--text);
+    background: var(--field); border: 1px solid var(--line); border-radius: 8px; }
+  input[type=text]:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button.danger { color: var(--danger); border-color: var(--danger); }
+
+  .photos { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 2px dashed var(--line); border-radius: 10px; min-height: 120px; align-items: center; }
+  .photos.drag { border-color: var(--accent); }
+  .photo { position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: var(--ph); }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo button { position: absolute; top: 4px; right: 4px; padding: 0; width: 22px; height: 22px; line-height: 20px;
+    border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; }
+  .add { width: 100px; height: 100px; display: grid; place-items: center; text-align: center; font-size: 13px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer; padding: 6px; }
+  .add:hover { border-color: var(--accent); color: var(--accent); }
+  .add input { display: none; }
+
+  .candidates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .cand { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+  .cand .pic { aspect-ratio: 832 / 1216; }
+  .cand .actions { padding: 6px; gap: 6px; flex-wrap: wrap; }
+  .cand .actions button { padding: 4px 6px; font-size: 13px; }
+  .cand .actions .del { flex: 0 0 auto; }
+
+  .scales { display: grid; gap: 6px; margin-bottom: 12px; }
+  .scale { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .scale > span { width: 76px; font-size: 13px; color: var(--muted); }
+  .scale button { padding: 2px 10px; font-size: 13px; border-radius: 99px; }
+  .scale button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .preview { font-size: 12px; color: var(--muted); margin-top: 6px; font-family: ui-monospace, Consolas, monospace; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .status { margin-top: 12px; min-height: 22px; }
+  .status .err { color: var(--danger); }
+  .bar { height: 8px; border-radius: 99px; background: var(--ph); overflow: hidden; margin-top: 8px; }
+  .bar div { height: 100%; width: 0; background: var(--accent); transition: width .5s; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre.log { max-height: 260px; overflow: auto; font: 12px/1.45 ui-monospace, Consolas, monospace; background: var(--ph);
+    padding: 10px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0; }
+  .samples { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; }
+  .samples img { height: 160px; border-radius: 6px; }
+
+  .grid-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 24px 0 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .pic { position: relative; aspect-ratio: 3 / 4; background: var(--ph); display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pic .num { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 1px 7px; border-radius: 99px; z-index: 1; }
+  .pic .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45); color: #fff; display: none; place-items: center; z-index: 1; }
+  .item[data-status=running] .overlay, .item[data-status=queued] .overlay { display: grid; }
+  .item[data-status=running] .overlay span::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px;
+    border: 2px solid #fff; border-right-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .body { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .body textarea { margin: 0; resize: vertical; min-height: 96px; font-size: 13px; }
+  .body .error { color: var(--danger); font-size: 12px; }
+  .actions { display: flex; gap: 8px; }
+  .actions > * { flex: 1; }
+  .upload-btn { display: inline-block; text-align: center; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  .upload-btn:hover { border-color: var(--accent); }
+  .upload-btn.disabled { opacity: .45; pointer-events: none; }
+  .upload-btn input { display: none; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--danger); color: #fff;
+    padding: 10px 16px; border-radius: 8px; max-width: calc(100% - 32px); display: none; z-index: 10; }
+  @media (max-width: 640px) { .fields { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>LoRA персонажа</h1>
+
+  <section class="card">
+    <div class="fields">
+      <label class="field">Имя персонажа
+        <input type="text" id="name" list="projects" placeholder="nastya" autocomplete="off">
+        <datalist id="projects"></datalist>
+        <div class="hint">Латиницей. Папка datasets/&lt;имя&gt;/, можно выбрать существующего</div>
+      </label>
+      <label class="field">Ключевое слово для LoRA
+        <input type="text" id="trigger" placeholder="nst woman" autocomplete="off">
+        <div class="hint">Слово, по которому LoRA вызывает персонажа: photo of nst woman ...</div>
+      </label>
+    </div>
+    <h2>Фото персонажа</h2>
+    <div class="photos" id="photos">
+      <label class="add">+ Добавить фото<br>или перетащить сюда<input type="file" id="file" accept="image/*" multiple></label>
+    </div>
+    <div class="hint">Одно или несколько фото, лицо хорошо видно. Несколько фото чередуются по сценам датасета.</div>
+    <h2 style="margin-top:16px">Фигура <span class="hint">необязательно</span></h2>
+    <div class="photos" id="body">
+      <label class="add">+ Добавить фото<br>или перетащить сюда<input type="file" accept="image/*" multiple></label>
+    </div>
+    <div class="hint">Тело от шеи вниз, без лица, нейтральный фон. Используется в сценах с <b>&lt;image2&gt;</b> в промпте.
+      Первое фото — вид спереди (для всех сцен), последнее — со спины (для сцен с <b>from behind</b>).
+      Можно загрузить своё или сгенерировать ниже.</div>
+    <label class="field" style="margin-top:12px">Описание фигуры
+      <input type="text" id="body-description" placeholder="например: natural curvy figure, full natural breasts, slim waist, olive skin" autocomplete="off">
+      <div class="hint">Дописывается в промпт сцен с <b>&lt;image2&gt;</b> только при генерации, в подписи датасета не попадает.
+        Нужно, когда одетая фигура или вид сбоку не совпадают с фото фигуры.</div>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>Генератор фигуры</h2>
+    <div class="fields">
+      <label class="field">Типаж
+        <select id="body-type"><option value="">— выбрать —</option></select>
+        <div class="hint">Выставляет шкалы ниже. Типажи: training/body_types.txt</div>
+      </label>
+      <label class="field">Сколько вариантов
+        <select id="body-count"><option>2</option><option selected>4</option><option>8</option></select>
+      </label>
+    </div>
+    <div class="scales" id="body-scales"></div>
+    <label class="field">Дополнительно
+      <input type="text" id="body-extra" placeholder="например: freckles on shoulders, small mole on the hip" autocomplete="off">
+      <div class="hint">Кожу выберите под лицо, иначе шея и тело не совпадут. Повторный клик по ступени снимает её. Шкалы: training/body_scales.txt</div>
+    </label>
+    <div class="preview" id="body-preview"></div>
+    <div class="controls" style="margin-top:10px">
+      <button id="body-generate">Сгенерировать варианты</button>
+      <span class="hint" id="body-status"></span>
+    </div>
+    <div class="candidates" id="candidates"></div>
+    <div class="hint" style="margin-top:10px">«В фигуру» добавляет картинку в референсы фигуры выше.
+      «Ракурсы» делает из неё ту же фигуру сбоку, сзади и в три четверти.</div>
+  </section>
+
+  <section class="card">
+    <div class="controls">
+      <button id="generate">Сгенерировать фото</button>
+      <button class="primary" id="train">Начать обучение</button>
+      <button class="danger" id="stop">Остановить</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="bar" id="bar" hidden><div></div></div>
+    <div class="samples" id="samples"></div>
+    <details id="logbox" hidden><summary>Лог обучения</summary><pre class="log" id="log"></pre></details>
+  </section>
+
+  <div class="grid-head">
+    <h2 id="count">Датасет</h2>
+    <label class="upload-btn" id="add-own">+ Добавить свои картинки<input type="file" accept="image/*" multiple></label>
+  </div>
+  <div class="hint" style="margin-bottom:12px">В промпте персонаж обозначается как <b>the woman from &lt;image1&gt;</b>, с фигурой —
+    <b>the woman from &lt;image1&gt; with the body from &lt;image2&gt;</b>. Указывайте одежду (или nude), иначе LoRA выучит одежду с фото.
+    У своих картинок промпт — это подпись для обучения: опишите, что на картинке.</div>
+  <div class="grid" id="items"></div>
+</main>
+
+<template id="item-tpl">
+  <div class="item">
+    <div class="pic"><span class="num"></span><span class="empty">Ещё не создано</span>
+      <a target="_blank" hidden><img alt=""></a><div class="overlay"><span></span></div></div>
+    <div class="body">
+      <textarea spellcheck="false"></textarea>
+      <div class="error"></div>
+      <div class="actions">
+        <button class="regen">Перегенерировать</button>
+        <label class="upload-btn own">Загрузить своё<input type="file" accept="image/*"></label>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  let name = '';
+  let state = null;
+
+  function remember(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  function recall(key) { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } }
+
+  let toastTimer;
+  function toast(text) {
+    const el = $('#toast');
+    el.textContent = text;
+    el.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.style.display = 'none', 6000);
+  }
+
+  async function api(path, body) {
+    const options = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, ...body }) };
+    const res = await fetch(path, options);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
+
+  async function act(fn) {
+    try { await fn(); } catch (e) { toast(e.message); }
+    await refresh();
+  }
+
+  async function refresh() {
+    try {
+      state = await api('/api/state?name=' + encodeURIComponent(name));
+      render();
+    } catch (e) {
+      $('#status').innerHTML = '<span class="err"></span>';
+      $('#status .err').textContent = e.message;
+    }
+  }
+
+  function render() {
+    $('#projects').innerHTML = '';
+    state.projects.forEach(p => $('#projects').append(new Option(p)));
+    const job = state.job;
+    const mine = !job.kind || job.name === name;
+    const items = state.items || [];
+    const done = items.filter(i => i.image).length;
+
+    if (document.activeElement !== $('#trigger')) $('#trigger').value = state.trigger || '';
+    if (document.activeElement !== $('#body-description')) $('#body-description').value = state.body_description || '';
+    renderPhotos($('#photos'), state.photos || [], false);
+    renderPhotos($('#body'), state.body || [], true);
+    renderBodyGenerator(job, mine);
+
+    $('#generate').disabled = !name || job.kind === 'train' || !(state.photos || []).length || (job.kind && !mine);
+    $('#train').disabled = !name || !!job.kind;
+    $('#stop').disabled = !job.kind;
+
+    const status = $('#status');
+    status.textContent = job.kind && !mine ? `Сейчас занят персонаж ${job.name}: ${job.status}` : job.status;
+    if (job.error) {
+      const err = document.createElement('div');
+      err.className = 'err';
+      err.textContent = job.error;
+      status.append(err);
+    }
+    const training = job.kind === 'train' || job.log.length;
+    const bar = $('#bar');
+    bar.hidden = !(job.kind && job.total && mine);
+    if (!bar.hidden && job.kind === 'train') {
+      bar.firstElementChild.style.width = (100 * job.step / job.total) + '%';
+      status.append(document.createTextNode(` · шаг ${job.step} из ${job.total}`));
+    } else if (!bar.hidden) {
+      // ComfyUI не сообщает прогресс по HTTP: текущая картинка заполняется по среднему времени готовых
+      const current = job.average ? Math.min(0.95, job.elapsed / job.average) : 0;
+      bar.firstElementChild.style.width = (100 * Math.min(job.total, job.step + current) / job.total) + '%';
+      let text = ` · готово ${job.step} из ${job.total}`;
+      if (job.average) {
+        const left = Math.max(0, (job.total - job.step) * job.average - job.elapsed);
+        text += left < 60 ? ' · меньше минуты' : ` · осталось ~${Math.round(left / 60)} мин`;
+      }
+      status.append(document.createTextNode(text));
+    }
+    $('#logbox').hidden = !training;
+    const log = $('#log');
+    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 10;
+    log.textContent = job.log.join('\n');
+    if (atBottom) log.scrollTop = log.scrollHeight;
+
+    const samples = $('#samples');
+    const urls = (state.samples || []).join('|');
+    if (samples.dataset.urls !== urls) {
+      samples.dataset.urls = urls;
+      samples.innerHTML = '';
+      (state.samples || []).forEach(u => {
+        const a = document.createElement('a');
+        a.href = u; a.target = '_blank';
+        a.innerHTML = '<img alt="" title="Тестовая картинка обучения">';
+        a.firstChild.src = u;
+        samples.append(a);
+      });
+    }
+
+    let count = name ? `Датасет: готово ${done} из ${items.length}` : 'Датасет';
+    if ((state.loras || []).length) count += ` · готовые LoRA: ${state.loras.join(', ')}`;
+    $('#count').textContent = count;
+    renderItems(items);
+  }
+
+  function renderPhotos(box, photos, body) {
+    const add = box.querySelector('.add');
+    const key = photos.map(p => p.url).join('|');
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.querySelectorAll('.photo').forEach(el => el.remove());
+    photos.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'photo';
+      el.innerHTML = '<img alt=""><button title="Удалить">×</button>';
+      el.querySelector('img').src = p.url;
+      el.querySelector('button').onclick = () => act(() => api('/api/photos/delete', { file: p.file, body }));
+      box.insertBefore(el, add);
+    });
+  }
+
+  // выбранная ступень каждой шкалы фигуры: {Грудь: 'M', ...}
+  let scales = {};
+  try { scales = JSON.parse(recall('lora-studio-scales') || '{}'); } catch (e) {}
+
+  function bodyDescription() {
+    const parts = state.body_scales.filter(s => scales[s.scale] === s.label).map(s => s.phrase);
+    const extra = $('#body-extra').value.trim().replace(/[.,\s]+$/, '');
+    return [...parts, extra].filter(Boolean).join(', ');
+  }
+
+  function setScales(values) {
+    scales = values;
+    remember('lora-studio-scales', JSON.stringify(scales));
+    renderScales();
+  }
+
+  function renderScales() {
+    const box = $('#body-scales');
+    const key = state.body_scales.map(s => s.scale + s.label).join('|');
+    if (box.dataset.key !== key) {
+      box.dataset.key = key;
+      box.innerHTML = '';
+      const rows = {};
+      state.body_scales.forEach(s => {
+        if (!rows[s.scale]) {
+          rows[s.scale] = document.createElement('div');
+          rows[s.scale].className = 'scale';
+          rows[s.scale].innerHTML = '<span></span>';
+          rows[s.scale].firstChild.textContent = s.scale;
+          box.append(rows[s.scale]);
+        }
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = s.label;
+        b.title = s.phrase;
+        b.onclick = () => {
+          setScales({ ...scales, [s.scale]: scales[s.scale] === s.label ? undefined : s.label });
+          $('#body-type').value = '';
+        };
+        rows[s.scale].append(b);
+      });
+    }
+    box.querySelectorAll('.scale').forEach(row => {
+      const scale = row.firstChild.textContent;
+      row.querySelectorAll('button').forEach(b => b.classList.toggle('on', scales[scale] === b.textContent));
+    });
+    const text = bodyDescription();
+    $('#body-preview').textContent = text ? 'В промпт: ' + text : 'Выберите типаж или ступени шкал';
+  }
+
+  function renderBodyGenerator(job, mine) {
+    const select = $('#body-type');
+    if (select.options.length === 1 && state.body_types.length) {
+      state.body_types.forEach((t, i) => select.append(new Option(t.label, i)));
+    }
+    renderScales();
+    const busy = job.kind === 'train' || (job.kind && !mine);
+    $('#body-generate').disabled = !name || busy;
+    const pending = state.body_pending || 0;
+    $('#body-status').textContent = pending ? `Генерируется вариантов: ${pending}` : '';
+    if (state.body_error) $('#body-status').textContent += (pending ? ' · ' : '') + 'Ошибка: ' + state.body_error;
+
+    const box = $('#candidates');
+    const candidates = state.candidates || [];
+    const key = candidates.map(c => c.url).join('|') + '#' + pending + '#' + busy;
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.innerHTML = '';
+    candidates.slice().reverse().forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'cand';
+      el.innerHTML = '<div class="pic"><a target="_blank"><img alt=""></a></div><div class="actions">' +
+        '<button class="use">В фигуру</button><button class="views">Ракурсы</button><button class="del" title="Удалить">×</button></div>';
+      el.querySelector('a').href = c.url;
+      el.querySelector('img').src = c.url;
+      el.querySelector('.use').onclick = () => act(() => api('/api/body/use', { file: c.file }));
+      el.querySelector('.views').disabled = busy;
+      el.querySelector('.views').onclick = () => act(() => api('/api/body/views', { file: c.file }));
+      el.querySelector('.del').onclick = () => act(() => api('/api/body/delete', { file: c.file }));
+      box.append(el);
+    });
+    for (let i = 0; i < pending; i++) {
+      const el = document.createElement('div');
+      el.className = 'cand';
+      el.innerHTML = '<div class="pic">В очереди…</div>';
+      box.prepend(el);
+    }
+  }
+
+  const labels = { running: 'Генерируется…', queued: 'В очереди' };
+  function renderItems(items) {
+    const grid = $('#items');
+    items.forEach(it => {
+      let el = grid.children[it.index - 1];
+      if (!el) {
+        el = $('#item-tpl').content.firstElementChild.cloneNode(true);
+        wire(el, it.index);
+        grid.append(el);
+      }
+      el.dataset.status = it.status;
+      el.querySelector('.num').textContent = it.index;
+      const link = el.querySelector('a');
+      const img = link.querySelector('img');
+      link.hidden = !it.image;
+      el.querySelector('.empty').hidden = !!it.image;
+      if (it.image && img.dataset.src !== it.image) { img.src = it.image; img.dataset.src = it.image; link.href = it.image; }
+      el.querySelector('.overlay span').textContent = labels[it.status] || '';
+      el.querySelector('.error').textContent = it.error;
+      const ta = el.querySelector('textarea');
+      if (document.activeElement !== ta && !ta.dataset.dirty) ta.value = it.prompt;
+      el.querySelector('.regen').textContent = it.image ? 'Перегенерировать' : 'Сгенерировать';
+      const generating = it.status === 'running' || it.status === 'queued';
+      el.querySelector('.regen').disabled = state.job.kind === 'train' || !(state.photos || []).length || generating;
+      el.querySelector('.own').classList.toggle('disabled', state.job.kind === 'train' || generating);
+    });
+    $('#add-own').classList.toggle('disabled', !name || state.job.kind === 'train');
+    while (grid.children.length > items.length) grid.lastElementChild.remove();
+  }
+
+  function wire(el, index) {
+    const ta = el.querySelector('textarea');
+    ta.oninput = () => ta.dataset.dirty = '1';
+    ta.onblur = () => {
+      if (!ta.dataset.dirty) return;
+      act(async () => { await api('/api/prompt', { index, prompt: ta.value }); delete ta.dataset.dirty; });
+    };
+    el.querySelector('.regen').onclick = () => act(async () => {
+      await api('/api/regenerate', { index, prompt: ta.value });
+      delete ta.dataset.dirty;
+    });
+    el.querySelector('.own input').onchange = e => {
+      const files = [...e.target.files];  // копия: очистка поля очищает и сам FileList
+      e.target.value = '';
+      act(async () => {
+        if (ta.dataset.dirty) { await api('/api/prompt', { index, prompt: ta.value }); delete ta.dataset.dirty; }
+        await uploadOwn(files, index);
+      });
+    };
+  }
+
+  async function uploadOwn(files, index) {
+    if (files.length) await api('/api/upload', { index, files: await Promise.all(files.map(readFile)) });
+  }
+
+  function readFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function upload(files, body) {
+    files = [...files].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    if (!name) { toast('Сначала введите имя персонажа'); return; }
+    await act(async () => api('/api/photos', { files: await Promise.all(files.map(readFile)), body }));
+  }
+
+  function selectName(value) {
+    value = value.trim();
+    if (value && !/^[A-Za-z0-9_-]+$/.test(value)) { toast('Имя персонажа: латиница, цифры, _ и -'); return; }
+    name = value;
+    remember('lora-studio-name', name);
+    $('#items').innerHTML = '';
+    refresh();
+  }
+
+  $('#name').onchange = e => selectName(e.target.value);
+  $('#trigger').onchange = e => { if (name) act(() => api('/api/trigger', { trigger: e.target.value })); };
+  $('#body-description').onchange = e => { if (name) act(() => api('/api/body/description', { description: e.target.value })); };
+  [[$('#photos'), false], [$('#body'), true]].forEach(([box, body]) => {
+    box.querySelector('input').onchange = e => { upload(e.target.files, body); e.target.value = ''; };
+    box.ondragover = e => { e.preventDefault(); box.classList.add('drag'); };
+    box.ondragleave = () => box.classList.remove('drag');
+    box.ondrop = e => { e.preventDefault(); box.classList.remove('drag'); upload(e.dataTransfer.files, body); };
+  });
+  $('#add-own input').onchange = e => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    act(() => uploadOwn(files));
+  };
+  $('#generate').onclick =() => act(() => api('/api/generate', {}));
+  $('#train').onclick = () => act(async () => {
+    if (document.activeElement === $('#trigger')) await api('/api/trigger', { trigger: $('#trigger').value });
+    await api('/api/train', {});
+  });
+  $('#stop').onclick = () => act(() => api('/api/stop', {}));
+  $('#body-type').onchange = e => {
+    // кожа от типажа не зависит: подбирается под лицо
+    if (e.target.value !== '') setScales({ ...state.body_types[e.target.value].values, 'Кожа': scales['Кожа'] });
+  };
+  $('#body-extra').value = recall('lora-studio-body-extra');
+  $('#body-extra').oninput = e => { remember('lora-studio-body-extra', e.target.value); if (state) renderScales(); };
+  $('#body-generate').onclick = () => act(() => api('/api/body/generate',
+    { description: bodyDescription(), count: +$('#body-count').value }));
+
+  name = recall('lora-studio-name');
+  $('#name').value = name;
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>
