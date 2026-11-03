@@ -43,6 +43,30 @@
         "h3_lora_nsfw_v2",
         "h3_lora_digital_art"
       ]
+    },
+    "h3-ref-server": {
+      "description": "MiniMax H3 ref2va (референсы персонажа) + NSFW LoRA, int8 (~23 ГБ сверх h3-server), GPU 48GB+",
+      "files": [
+        "h3_ref_unet_int8",
+        "h3_te_int8",
+        "h3_video_vae_int8",
+        "h3_audio_vae",
+        "h3_ref_turbo_4step",
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
+      ]
+    },
+    "h3-ref-server-bf16": {
+      "description": "MiniMax H3 ref2va (референсы персонажа) + NSFW LoRA, bf16 (~42 ГБ сверх h3-server-bf16), GPU 80GB",
+      "files": [
+        "h3_ref_unet_bf16",
+        "h3_te_bf16",
+        "h3_video_vae_fp16",
+        "h3_audio_vae",
+        "h3_ref_turbo_4step",
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
+      ]
     }
   },
   "files": {
@@ -121,6 +145,18 @@
       "dir": "loras",
       "name": "minimax_h3_digital_art_v3.safetensors",
       "auth": "civitai"
+    },
+    "h3_ref_unet_int8": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "dir": "diffusion_models"
+    },
+    "h3_ref_unet_bf16": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_bf16.safetensors",
+      "dir": "diffusion_models"
+    },
+    "h3_ref_turbo_4step": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "dir": "loras"
     }
   }
 }

@@ -127,6 +127,23 @@ Load Image и подключить к `first_frame` / `last_frame` узла «Pr
 Модель использует pruned-версию H3: в ней все слои, которые меняют обе LoRA, совпадают с полной.
 На реальном GPU эта связка ещё не запускалась.
 
+### Персонаж по референсам (ref2va)
+
+Отдельная модель H3: картинки идут не первым кадром, а референсом внешности. Персонаж может
+появляться в любой сцене и с любого ракурса. Принимает до 9 картинок, в промпте они называются `<Picture 1>`, `<Picture 2>`...
+в порядке `--ref`. Скачать (TE, VAE и LoRA общие с `h3-server*`):
+`.venv/bin/python scripts/download_models.py --profile h3-ref-server-bf16` (или `h3-ref-server` для int8).
+
+```
+python scripts/generate_video.py --profile server_bf16 --ref face.png --ref body.png -p "..."
+python scripts/generate_video.py --profile server_bf16 --ref face.png --turbo -p "..."   # 4 шага вместо 20
+```
+
+В интерфейсе: `workflows/h3_ref_server.json` (или `_server_bf16.json`). Load Image подключать к `ref_image_0`,
+`ref_image_1`... узла «Prompt». Настройки как в официальном шаблоне ComfyUI: 20 шагов, res_multistep, без CFG;
+turbo LoRA `ref2v_turbo_4step` v0.1 даёт 4 шага. `--ref-size max` точнее держит лицо, но работает в разы медленнее.
+NSFW LoRA обучена на fl2va, на ref2va её не проверяли.
+
 ## HTTP API (картинки, видео, персонажи)
 
 NestJS-сервис в `api/` поверх ComfyUI: принимает задание, ставит в очередь и отдаёт png/mp4.

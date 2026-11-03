@@ -4,6 +4,8 @@
   python scripts/generate_video.py -p "..." --seconds 5
 Из картинки (первый кадр), можно добавить и последний:
   python scripts/generate_video.py --first-frame start.png [--last-frame end.png] -p "..."
+Персонаж по референсам (ref2va, до 9 картинок, в промпте <Picture 1>, <Picture 2>...):
+  python scripts/generate_video.py --ref face.png --ref body.png -p "..." [--turbo]
 Рисованный стиль (Digital Art LoRA): добавить --style 1.0
 Видео сохраняются в output/video/.
 """
@@ -20,12 +22,22 @@ from generate import ROOT, post, upload_image
 FPS = 24
 STYLE_LORA = "minimax_h3_digital_art_v3.safetensors"
 STYLE_TRIGGER = "flat cel shading, bold outlines, multi colors"
+REF_TURBO_LORA = "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors"
 
 
 def frames_for(seconds):
     """Модель принимает длину 17k+5 кадров: округляем вверх, как официальный шаблон."""
     n = max(5, round(seconds * FPS))
     return n + (5 - n % 17) % 17
+
+
+def size_for(image_path, area=1344 * 768, step=32):
+    """Размер видео с пропорциями картинки и площадью как у 1344x768, кратно 32."""
+    from PIL import Image
+    with Image.open(image_path) as img:
+        w, h = img.size
+    scale = (area / (w * h)) ** 0.5
+    return max(step, round(w * scale / step) * step), max(step, round(h * scale / step) * step)
 
 
 def main():
@@ -36,9 +48,14 @@ def main():
     parser.add_argument("-p", "--prompt", required=True, help="сцена, движение камеры и звук одним текстом")
     parser.add_argument("--first-frame", type=Path)
     parser.add_argument("--last-frame", type=Path)
+    parser.add_argument("--ref", type=Path, action="append", default=[],
+                        help="референс персонажа (ref2va), можно до 9 раз; в промпте <Picture 1>, <Picture 2>...")
+    parser.add_argument("--ref-size", choices=["match", "max"], default="match",
+                        help="max: референсы до 2048 px, лицо точнее, но в разы медленнее")
+    parser.add_argument("--turbo", action="store_true", help="ref2va: turbo LoRA на 4 шага вместо 20")
     parser.add_argument("--seconds", type=float, default=5, help="обучено на ~5-15 с")
-    parser.add_argument("--width", type=int, default=1344)
-    parser.add_argument("--height", type=int, default=768)
+    parser.add_argument("--width", type=int, help="по умолчанию 1344 или по пропорциям --first-frame")
+    parser.add_argument("--height", type=int, help="по умолчанию 768 или по пропорциям --first-frame")
     parser.add_argument("--steps", type=int, help="8 с turbo LoRA")
     parser.add_argument("--lora", type=float, help="сила NSFW LoRA, автор советует 0.3-1, начинать с 0.5")
     parser.add_argument("--style", type=float, metavar="STRENGTH",
@@ -48,7 +65,14 @@ def main():
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
 
-    workflow = json.loads((ROOT / "workflows" / f"h3_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
+    if args.ref and (args.first_frame or args.last_frame):
+        parser.error("--ref (ref2va) нельзя вместе с --first-frame/--last-frame (fl2va): это разные модели")
+    if len(args.ref) > 9:
+        parser.error("ref2va принимает до 9 референсов")
+    if args.turbo and not args.ref:
+        parser.error("--turbo только для --ref; у fl2va turbo уже включён")
+    kind = "ref" if args.ref else "nsfw"
+    workflow = json.loads((ROOT / "workflows" / f"h3_{kind}_{args.profile}.json").read_text(encoding="utf-8"))
     video = workflow["7"]["inputs"]
     prompt = args.prompt
     if args.style is not None:
@@ -56,7 +80,23 @@ def main():
             "model": ["3", 0], "lora_name": STYLE_LORA, "strength_model": args.style}}
         workflow["10"]["inputs"]["model"] = workflow["11"]["inputs"]["model"] = ["17", 0]
         prompt = f"{STYLE_TRIGGER}. {prompt}"
-    video.update(prompt=prompt, width=args.width, height=args.height, length=frames_for(args.seconds))
+    if args.width and args.height:
+        width, height = args.width, args.height
+    elif args.first_frame or args.last_frame:
+        width, height = size_for(args.first_frame or args.last_frame)
+    else:
+        width, height = args.width or 1344, args.height or 768
+    video.update(prompt=prompt, width=width, height=height, length=frames_for(args.seconds))
+    if args.turbo:
+        workflow["2"] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": ["1", 0], "lora_name": REF_TURBO_LORA, "strength_model": 1.0}}
+        workflow["3"]["inputs"]["model"] = ["2", 0]
+        workflow["10"]["inputs"]["steps"] = 4
+    if args.ref:
+        video["ref_image_size"] = args.ref_size
+        for i, path in enumerate(args.ref):
+            workflow[f"3{i}"] = {"class_type": "LoadImage", "inputs": {"image": upload_image(args.host, path)}}
+            video[f"ref_images.ref_image_{i}"] = [f"3{i}", 0]
     if args.steps:
         workflow["10"]["inputs"]["steps"] = args.steps
     if args.lora is not None:
@@ -71,7 +111,7 @@ def main():
     for i in range(args.count):
         workflow["8"]["inputs"]["noise_seed"] = seed + i
         pending.add(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
-        print(f"в очереди: seed={seed + i}, кадров={video['length']}")
+        print(f"в очереди: seed={seed + i}, {width}x{height}, кадров={video['length']}")
 
     while pending:
         time.sleep(5)
