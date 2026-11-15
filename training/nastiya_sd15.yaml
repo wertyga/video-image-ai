@@ -1,0 +1,62 @@
+# nastiya под SD 1.5: тот же датасет images_v3 (48 кадров), обучение на чекпойнте LazyMix+ v4, локально на RTX 4060 Ti 16GB.
+# Запуск: .\scripts\train_lora.ps1 training\nastiya_sd15.yaml  (ComfyUI перед этим остановить, чтобы освободить VRAM)
+# Применение: python scripts/generate_sd15.py -p "nst woman ..." --lora nastiya_sd15.safetensors:0.9
+job: extension
+config:
+  name: "nastiya_sd15"
+  process:
+    - type: "sd_trainer"
+      training_folder: "output"   # внутри ai-toolkit/
+      device: cuda:0
+      trigger_word: "nst woman"
+      network:
+        type: "lora"
+        linear: 32
+        linear_alpha: 16
+      save:
+        dtype: float16
+        save_every: 250
+        max_step_saves_to_keep: 12
+      datasets:
+        - folder_path: "../datasets/nastiya/images_v3"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [512, 640, 768]
+      train:
+        batch_size: 2
+        steps: 2500
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "ddpm"
+        min_snr_gamma: 5
+        optimizer: "adamw8bit"
+        lr: 1e-4
+        dtype: bf16
+      model:
+        # SD 1.5 (arch не указан): одиночный файл чекпойнта
+        name_or_path: "../ComfyUI/models/checkpoints/LazyPlus_V4_fp16_VAE.safetensors"
+        is_v2: false
+        is_xl: false
+      sample:
+        sampler: "ddpm"
+        sample_every: 250
+        width: 512
+        height: 768
+        prompts:
+          - "amateur, photo of nst woman sitting in a cafe by the window, soft daylight, instagram photo, real life photo, shot on iPhone"
+          - "amateur, close-up portrait of nst woman smiling, golden hour backlight, instagram photo, real life photo"
+          - "amateur, full-body photo of nst woman standing in a bedroom in black lingerie, warm lamp light, real life photo, shot on iPhone"
+          - "amateur, photo of nst woman nude sitting on her bed, in her messy bedroom, r/nude_selfie, reddit, real life photo"
+          - "amateur, photo of nst woman in strict right profile, looking out of a train window, overcast light, real life photo"
+        neg: "child, teen, underage, childlike face, bad art, ugly face, messed up face, bad hands, professional photo shoot, doll, plastic_doll, anime, cartoon, airbrush"
+        seed: 42
+        walk_seed: true
+        guidance_scale: 7
+        sample_steps: 30
+meta:
+  name: "[name]"
+  version: "1.0"
