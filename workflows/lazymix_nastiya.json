@@ -1,0 +1,173 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "LazyMix+ v4 (SD 1.5)"
+    },
+    "inputs": {
+      "ckpt_name": "LazyPlus_V4_fp16_VAE.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "VAE ft-mse-840000 (как у автора в примерах)"
+    },
+    "inputs": {
+      "vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    },
+    "inputs": {
+      "clip": [
+        "30",
+        1
+      ],
+      "text": "amateur, full-body photo of nst woman, 25 year old, nude, medium breasts, standing in her messy bedroom, front view, morning light, analog style, instagram photo, RAW, real life photo, r/nude_selfie, reddit, medium quality, normal aesthetic, shot on iPhone, film grain"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative (автора + защита от юных лиц)"
+    },
+    "inputs": {
+      "clip": [
+        "30",
+        1
+      ],
+      "text": "child, teen, underage, childlike face, wrinkles, old, mature, bad art, ugly face, messed up face, poorly drawn hands, bad hands, professional photo shoot, makeup, photoshop, doll, plastic_doll, silicone, anime, cartoon, fake, filter, airbrush, 3d max, featureless, colourless, impassive, shaders, watermark, text"
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Base size 512x768"
+    },
+    "inputs": {
+      "width": 512,
+      "height": 768,
+      "batch_size": 1
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Base pass"
+    },
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ],
+      "seed": 0,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_sde",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "LatentUpscaleBy",
+    "_meta": {
+      "title": "Hires fix x1.5 (Latent)"
+    },
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "upscale_method": "nearest-exact",
+      "scale_by": 1.5
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Hires pass"
+    },
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "seed": 0,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_sde",
+      "scheduler": "karras",
+      "denoise": 0.4
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "lazymix_nastiya"
+    }
+  },
+  "30": {
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA nastiya (SD 1.5), сила 0.75-1.0"
+    },
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "nastiya_sd15.safetensors",
+      "strength_model": 0.9,
+      "strength_clip": 0.9
+    }
+  }
+}
