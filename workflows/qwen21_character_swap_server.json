@@ -1,0 +1,213 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Diffusion model"
+    },
+    "inputs": {
+      "unet_name": "qwen_image_2.1_bf16.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "NSFW LoRA"
+    },
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "strength_model": 0.0
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Text encoder"
+    },
+    "inputs": {
+      "clip_name": "qwen3vl_8b_bf16.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "TextEncodeQwenImage21",
+    "_meta": {
+      "title": "Prompt"
+    },
+    "inputs": {
+      "clip": [
+        "3",
+        0
+      ],
+      "prompt": "Replace the woman in <image1> with nst woman. Use <image2> as a reference for her face and hair and <image3> only as a reference for her body shape: natural curvy figure, medium-full breasts, slim waist. Keep the exact pose, framing and camera angle of <image1>: she is lying on her back in a bridge pose, hips raised, knees bent, arms along her body, and her head rests sideways on the fabric at the right side of the frame, exactly where the head is in <image1>, seen from the same angle, looking at the camera. Her breasts are fully covered by the bra: full-coverage lined black polka-dot bra cups, nothing exposed. Same black polka-dot lingerie, garter belt, fishnet ankle socks and lace wrist cuffs, same fabric, curtain backdrop and studio lighting as <image1>.",
+      "negative_prompt": "exposed breasts, nipples, areola, topless, bra pulled down, see-through bra, blurry, lowres, deformed anatomy, extra fingers, watermark, text",
+      "resolution": 0,
+      "vae": [
+        "4",
+        0
+      ],
+      "images.image_1": [
+        "6",
+        0
+      ],
+      "images.image_2": [
+        "22",
+        0
+      ],
+      "images.image_3": [
+        "24",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Size (auto, keeps proportions)"
+    },
+    "inputs": {
+      "image": [
+        "20",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 32
+    }
+  },
+  "7": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Sampler"
+    },
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "5",
+        1
+      ],
+      "latent_image": [
+        "5",
+        2
+      ],
+      "seed": 0,
+      "steps": 30,
+      "cfg": 4.0,
+      "sampler_name": "er_sde",
+      "scheduler": "beta",
+      "denoise": 1.0
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "7",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "nastiya_swap"
+    }
+  },
+  "20": {
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Scene image 1"
+    },
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "21": {
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Face image 2"
+    },
+    "inputs": {
+      "image": "nastiya_01.png"
+    }
+  },
+  "22": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Reference size"
+    },
+    "inputs": {
+      "image": [
+        "21",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 32
+    }
+  },
+  "30": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Character LoRA"
+    },
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "lora_name": "nastiya_v3.safetensors",
+      "strength_model": 1.0
+    }
+  },
+  "23": {
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Body image 3"
+    },
+    "inputs": {
+      "image": "nastiya_body_03.png"
+    }
+  },
+  "24": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Reference size 3"
+    },
+    "inputs": {
+      "image": [
+        "23",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 32
+    }
+  }
+}

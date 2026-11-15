@@ -28,12 +28,16 @@ def main():
     parser.add_argument("--count", type=int, default=1)
     parser.add_argument("--seed", type=int, help="по умолчанию случайный")
     parser.add_argument("--host", default="http://127.0.0.1:8188")
+    parser.add_argument("--server", action="store_true",
+                        help="bf16-флоу qwen21_character_swap_server.json (ComfyUI на сервере, через туннель --host)")
+    parser.add_argument("--lora", help="LoRA персонажа вместо указанной во флоу, например nastiya_v3_000002500.safetensors")
+    parser.add_argument("--nsfw", type=float, help="сила NSFW LoRA (по умолчанию 0)")
     args = parser.parse_args()
     if not args.lora_only and args.face is None:
         parser.error("нужен --face или --lora-only")
 
     dataset = ROOT / "datasets" / args.character
-    workflow = json.loads((ROOT / "workflows" / "qwen21_character_swap_local.json").read_text(encoding="utf-8"))
+    workflow = json.loads((ROOT / "workflows" / f"qwen21_character_swap_{'server' if args.server else 'local'}.json").read_text(encoding="utf-8"))
     workflow["20"]["inputs"]["image"] = upload_image(args.host, args.image)
     if args.lora_only:
         for node in ("21", "22", "23", "24"):
@@ -43,6 +47,10 @@ def main():
     else:
         workflow["21"]["inputs"]["image"] = upload_image(args.host, dataset / "faces" / f"{args.face}.png")
         workflow["23"]["inputs"]["image"] = upload_image(args.host, dataset / "body" / args.body)
+    if args.lora:
+        workflow["30"]["inputs"]["lora_name"] = args.lora
+    if args.nsfw is not None:
+        workflow["2"]["inputs"]["strength_model"] = args.nsfw
     workflow["5"]["inputs"]["prompt"] = args.prompt
     if args.negative is not None:
         workflow["5"]["inputs"]["negative_prompt"] = args.negative
