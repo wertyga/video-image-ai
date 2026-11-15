@@ -5,6 +5,7 @@ description: Пишет промпт для замены модели на фо�
 
 Персонаж по умолчанию: Настия, триггер `nst woman`, LoRA `nastiya_v3.safetensors`, фигура из `datasets/<имя>/body.txt`.
 Генерация идёт на арендном сервере: ComfyUI там, у пользователя открыт SSH-туннель `-L 8189:localhost:8188`, поэтому `--host http://127.0.0.1:8189`.
+Во флоу после LoRA персонажа стоит `krea2_film_texture_qwen21.safetensors` 0.5 (убирает пластиковую кожу); последняя фраза промпта про кожу и начало негатива работают вместе с ней, не убирай их.
 Референсы лица и фигуры (`<image2>`, `<image3>`) не подаются: с v3 лицо даёт сама LoRA, а референсы «вклеивают» ракурс и свет портрета.
 
 На каждое фото дай ответ по-русски, без лишнего текста:
@@ -12,10 +13,10 @@ description: Пишет промпт для замены модели на фо�
 1. **Prompt** в блоке кода, по шаблону (фигура дословно из `body.txt`):
 
 ```
-Replace the woman in <image1> with nst woman: <body.txt>. Keep the exact pose, framing and camera angle of <image1>: [поза, где голова в кадре и куда повёрнута, куда смотрит, выражение]. [одежда: цвет, материал, фасон каждой вещи], same background and lighting as <image1>.
+Replace the woman in <image1> with nst woman: <body.txt>. Keep the exact pose, framing and camera angle of <image1>: [поза, где голова в кадре и куда повёрнута, куда смотрит, выражение]. [одежда: цвет, материал, фасон каждой вещи], same background and lighting as <image1>. Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.
 ```
 
-2. **Негативный промпт** в блоке кода: базовый `skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text`. Если одежда открытая (бельё, купальник), добавь в начало `exposed breasts, nipples, areola, topless, bra pulled down, see-through bra,` и в Prompt перед описанием одежды `Her breasts are fully covered by the bra: full-coverage lined bra cups, nothing exposed.`, а слово `sheer` не используй.
+2. **Негативный промпт** в блоке кода: базовый `plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text`. Если одежда открытая (бельё, купальник), добавь в начало `exposed breasts, nipples, areola, topless, bra pulled down, see-through bra,` и в Prompt перед описанием одежды `Her breasts are fully covered by the bra: full-coverage lined bra cups, nothing exposed.`, а слово `sheer` не используй.
 
 Запуск: пользователь не подбирает ничего вручную. После промпта сам запусти (фото бери из пути в сообщении):
 

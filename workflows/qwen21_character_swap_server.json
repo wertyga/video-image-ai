@@ -93,7 +93,7 @@
     },
     "inputs": {
       "model": [
-        "30",
+        "31",
         0
       ],
       "positive": [
@@ -208,6 +208,20 @@
       "upscale_method": "lanczos",
       "megapixels": 1.0,
       "resolution_steps": 32
+    }
+  },
+  "31": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Skin realism (film texture, 0.5)"
+    },
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "lora_name": "krea2_film_texture_qwen21.safetensors",
+      "strength_model": 0.5
     }
   }
 }
