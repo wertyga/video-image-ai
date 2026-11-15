@@ -1,0 +1,285 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Diffusion model"
+    },
+    "inputs": {
+      "unet_name": "qwen_image_2.1_bf16.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "NSFW LoRA (0.8 - ню, 0 - одетые)"
+    },
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "lora_name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "strength_model": 0.8
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Text encoder"
+    },
+    "inputs": {
+      "clip_name": "qwen3vl_8b_bf16.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "TextEncodeQwenImage21",
+    "_meta": {
+      "title": "Prompt"
+    },
+    "inputs": {
+      "clip": [
+        "3",
+        0
+      ],
+      "prompt": "Replace the woman in <image1> with nst woman: slim but soft natural figure, not skinny, no visible ribs, slim hips and thighs, natural medium-sized breasts with a soft natural shape, realistic proportions, olive skin. Keep everything else exactly as in <image1>: the same pose, body position, head position and angle, gaze direction and facial expression, the same clothing and accessories (or the same nudity), the same framing, camera angle, background and lighting. Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.",
+      "negative_prompt": "plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text",
+      "resolution": 0,
+      "vae": [
+        "4",
+        0
+      ],
+      "images.image_1": [
+        "6",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Size (auto, keeps proportions)"
+    },
+    "inputs": {
+      "image": [
+        "20",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 1.0,
+      "resolution_steps": 32
+    }
+  },
+  "7": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Sampler (denoise 0.85 = поза с фото; 0.9 если проступает исходная модель)"
+    },
+    "inputs": {
+      "model": [
+        "32",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "5",
+        1
+      ],
+      "latent_image": [
+        "12",
+        0
+      ],
+      "seed": 0,
+      "steps": 30,
+      "cfg": 4.0,
+      "sampler_name": "er_sde",
+      "scheduler": "beta",
+      "denoise": 0.85
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "7",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "nastiya_pose"
+    },
+    "_meta": {
+      "title": "Save 1 Мп (оригинал)"
+    }
+  },
+  "20": {
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Scene image 1"
+    },
+    "inputs": {
+      "image": "example.png"
+    }
+  },
+  "30": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Character LoRA"
+    },
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "lora_name": "nastiya_v3.safetensors",
+      "strength_model": 1.0
+    }
+  },
+  "31": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Skin realism (film texture, 0.5)"
+    },
+    "inputs": {
+      "model": [
+        "30",
+        0
+      ],
+      "lora_name": "krea2_film_texture_qwen21.safetensors",
+      "strength_model": 0.5
+    }
+  },
+  "40": {
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Upscale model 4x"
+    },
+    "inputs": {
+      "model_name": "4x-UltraSharpV2.safetensors"
+    }
+  },
+  "41": {
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale x4"
+    },
+    "inputs": {
+      "upscale_model": [
+        "40",
+        0
+      ],
+      "image": [
+        "8",
+        0
+      ]
+    }
+  },
+  "42": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "2K (3.1 Мп, ~1440x2160)"
+    },
+    "inputs": {
+      "image": [
+        "41",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 3.1,
+      "resolution_steps": 8
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save 2K"
+    },
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "nastiya_pose_2k"
+    }
+  },
+  "44": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "4K (8.3 Мп, ~2160x3840)"
+    },
+    "inputs": {
+      "image": [
+        "41",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 8.3,
+      "resolution_steps": 8
+    }
+  },
+  "45": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save 4K"
+    },
+    "inputs": {
+      "images": [
+        "44",
+        0
+      ],
+      "filename_prefix": "nastiya_pose_4k"
+    }
+  },
+  "32": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Anatomy LoRA (0 - выкл, 0.7-1.0 - ню)"
+    },
+    "inputs": {
+      "model": [
+        "31",
+        0
+      ],
+      "lora_name": "qwen21_anatomy_v2.safetensors",
+      "strength_model": 0.0
+    }
+  },
+  "12": {
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "Pose lock: start from the scene photo"
+    },
+    "inputs": {
+      "pixels": [
+        "6",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  }
+}
