@@ -20,6 +20,30 @@
         "lora_glamour_realism"
       ]
     },
+    "h3-local": {
+      "description": "MiniMax H3 видео на RTX 4060 Ti 16GB: pruned int8 + Qwen3-VL nvfp4 + turbo 4 шага (~43 ГБ скачать), нужно 48GB RAM или подкачка",
+      "files": [
+        "h3_unet_int8",
+        "h3_te_nvfp4",
+        "h3_video_vae_int8",
+        "h3_audio_vae",
+        "h3_turbo_4step_768p",
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
+      ]
+    },
+    "h3-ref-local": {
+      "description": "MiniMax H3 ref2va на RTX 4060 Ti 16GB: pruned int8 + Qwen3-VL nvfp4 + turbo 4 шага (~23 ГБ сверх h3-local)",
+      "files": [
+        "h3_ref_unet_int8",
+        "h3_te_nvfp4",
+        "h3_video_vae_int8",
+        "h3_audio_vae",
+        "h3_ref_turbo_4step",
+        "h3_lora_nsfw_v2",
+        "h3_lora_digital_art"
+      ]
+    },
     "h3-server": {
       "description": "MiniMax H3 видео + NSFW LoRA, int8 (~53 ГБ скачать), GPU 48GB+",
       "files": [
@@ -156,6 +180,14 @@
     },
     "h3_ref_turbo_4step": {
       "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "dir": "loras"
+    },
+    "h3_te_nvfp4": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "dir": "text_encoders"
+    },
+    "h3_turbo_4step_768p": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors",
       "dir": "loras"
     }
   }

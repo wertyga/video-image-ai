@@ -1,0 +1,66 @@
+# nastiya v3: очищенный датасет (30 кадров, лицо сверено с refs/nastiya_01.png), арендный GPU 48GB+, bf16 без квантования.
+# Запуск на сервере: ./scripts/train_lora.sh training/nastiya_v3.yaml
+job: extension
+config:
+  name: "nastiya_v3"
+  process:
+    - type: "sd_trainer"
+      training_folder: "output"   # внутри ai-toolkit/
+      device: cuda:0
+      trigger_word: "nst woman"
+      network:
+        type: "lora"
+        linear: 32
+        linear_alpha: 32
+      save:
+        dtype: float16
+        save_every: 250
+        max_step_saves_to_keep: 12
+      datasets:
+        - folder_path: "../datasets/nastiya/images_v3"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [768, 1024]
+      train:
+        batch_size: 1
+        cache_text_embeddings: true
+        steps: 3000
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "flowmatch"
+        timestep_type: "shift"
+        optimizer: "adamw8bit"
+        lr: 1e-4
+        dtype: bf16
+      model:
+        # файлы берутся из ComfyUI/models (MODELS_PATH задаёт train_lora-скрипт)
+        name_or_path: "Comfy-Org/Qwen-Image-2.1"
+        arch: "qwen_image_2"
+        quantize: false
+        quantize_te: false
+        low_vram: false
+        model_kwargs:
+          rgba: false
+      sample:
+        sampler: "flowmatch"
+        sample_every: 250
+        width: 768
+        height: 1024
+        prompts:
+          - "photo of nst woman sitting in a cafe by the window, soft daylight"
+          - "photo of nst woman in a black leather jacket on a city street at night, neon light"
+          - "close-up portrait of nst woman smiling, golden hour backlight"
+          - "full-body photo of nst woman standing in a bedroom in black lingerie, warm lamp light"
+          - "photo of nst woman in strict right profile, looking out of a train window, overcast light"
+        neg: ""
+        seed: 42
+        walk_seed: true
+        guidance_scale: 3
+        sample_steps: 25
+meta:
+  name: "[name]"
+  version: "1.0"

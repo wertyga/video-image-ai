@@ -44,7 +44,8 @@ def main():
     # консоль Windows может быть не в UTF-8
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", default="server", choices=["server", "server_bf16"])
+    parser.add_argument("--profile", default="server", choices=["server", "server_bf16", "local"],
+                        help="local: RTX 4060 Ti 16GB, turbo 4 шага уже включён")
     parser.add_argument("-p", "--prompt", required=True, help="сцена, движение камеры и звук одним текстом")
     parser.add_argument("--first-frame", type=Path)
     parser.add_argument("--last-frame", type=Path)
@@ -56,7 +57,7 @@ def main():
     parser.add_argument("--seconds", type=float, default=5, help="обучено на ~5-15 с")
     parser.add_argument("--width", type=int, help="по умолчанию 1344 или по пропорциям --first-frame")
     parser.add_argument("--height", type=int, help="по умолчанию 768 или по пропорциям --first-frame")
-    parser.add_argument("--steps", type=int, help="8 с turbo LoRA")
+    parser.add_argument("--steps", type=int, help="8 с turbo LoRA (local: 4)")
     parser.add_argument("--lora", type=float, help="сила NSFW LoRA, автор советует 0.3-1, начинать с 0.5")
     parser.add_argument("--style", type=float, metavar="STRENGTH",
                         help="рисованный стиль Digital Art LoRA, автор советует 0.8-1.5, база 1.0")
@@ -71,6 +72,8 @@ def main():
         parser.error("ref2va принимает до 9 референсов")
     if args.turbo and not args.ref:
         parser.error("--turbo только для --ref; у fl2va turbo уже включён")
+    if args.profile == "local":
+        args.turbo = False  # в h3_*_local.json turbo LoRA уже стоит
     kind = "ref" if args.ref else "nsfw"
     workflow = json.loads((ROOT / "workflows" / f"h3_{kind}_{args.profile}.json").read_text(encoding="utf-8"))
     video = workflow["7"]["inputs"]

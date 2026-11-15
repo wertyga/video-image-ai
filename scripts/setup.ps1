@@ -1,6 +1,6 @@
 # Windows setup: .\scripts\setup.ps1 -Profile local-16gb[,h3-server]
 param(
-    [ValidateSet("local-16gb", "server", "h3-server", "h3-server-bf16")]
+    [ValidateSet("local-16gb", "server", "h3-local", "h3-ref-local", "h3-server", "h3-server-bf16", "h3-ref-server", "h3-ref-server-bf16")]
     [string[]]$Profile = @("local-16gb")
 )
 $ErrorActionPreference = "Stop"

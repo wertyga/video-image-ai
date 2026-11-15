@@ -1,7 +1,7 @@
 # AdUltAi
 
 ComfyUI + Qwen Image 2.1 + [NSFW LoRA v2 by TheseAlpacas](https://civitai.com/models/2958918) для картинок,
-MiniMax H3 + [NSFW Unlocked LoRA v2](https://civitai.com/models/2925727) для видео со звуком (только сервер).
+MiniMax H3 + [NSFW Unlocked LoRA v2](https://civitai.com/models/2925727) для видео со звуком.
 Модели в репозиторий не входят: их скачивает `setup` под выбранный профиль.
 
 ## Профили
@@ -10,6 +10,8 @@ MiniMax H3 + [NSFW Unlocked LoRA v2](https://civitai.com/models/2925727) для 
 |---|---|---|---|
 | `local-16gb` | RTX 4060 Ti 16GB, 32GB RAM | int8 / int8 | ~17 ГБ |
 | `server` | 48GB+ VRAM (A6000, L40S, A100, H100) | bf16 / bf16 (максимальное качество) | ~33 ГБ |
+| `h3-local` | видео, RTX 4060 Ti 16GB + 48GB RAM (или подкачка) | H3 pruned int8 / Qwen3-VL 32B nvfp4, turbo 4 шага | ~43 ГБ |
+| `h3-ref-local` | видео по референсам, то же железо | H3 ref2va pruned int8 / nvfp4, turbo 4 шага | ~23 ГБ сверх `h3-local` |
 | `h3-server` | видео, 48GB+ VRAM | H3 pruned int8 / Qwen3-VL 32B int8 | ~54 ГБ |
 | `h3-server-bf16` | видео, 80GB VRAM (A100 80GB, H100) | H3 pruned bf16 / bf16 (максимальное качество) | ~100 ГБ |
 
@@ -97,7 +99,7 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
 ## Видео: MiniMax H3
 
 Text-to-video и image-to-video (первый и/или последний кадр), ролик со звуком, 24 fps,
-1344×768 по умолчанию. Только профили `h3-server*`: на 16 ГБ видеопамяти модель не помещается.
+1344×768 по умолчанию. На сервере профили `h3-server*`, на 16 ГБ `h3-local` (см. ниже).
 
 ```
 python scripts/generate_video.py -p "..." --seconds 5
@@ -126,6 +128,25 @@ Load Image и подключить к `first_frame` / `last_frame` узла «Pr
 
 Модель использует pruned-версию H3: в ней все слои, которые меняют обе LoRA, совпадают с полной.
 На реальном GPU эта связка ещё не запускалась.
+
+### Локально на 16 ГБ (`h3-local`)
+
+```
+.\scripts\setup.ps1 -Profile h3-local            # + h3-ref-local для референсов
+.\scripts\run.ps1
+python scripts/generate_video.py --profile local -p "..." --seconds 3 --width 960 --height 544
+python scripts/generate_video.py --profile local --ref face.png -p "..." --seconds 3
+```
+
+В интерфейсе: `workflows/h3_nsfw_local.json`, `h3_digital_art_local.json`, `h3_ref_local.json`.
+
+- Модель (21 ГБ) не помещается в 16 ГБ VRAM целиком: ComfyUI сам выгружает часть в RAM, это медленнее сервера.
+- Энкодер nvfp4 (15.7 ГБ) на RTX 40xx работает без FP4-ускорения (оно только на Blackwell), веса остаются сжатыми.
+- Модель и энкодер вместе ~37 ГБ: при 32 ГБ RAM поставить файл подкачки Windows 64+ ГБ на NVMe, лучше 48+ ГБ RAM.
+- Turbo LoRA уже в workflow (fl2va: `turbo_4step_768p`, ref2va: `ref2v_turbo_4step`), 4 шага. `--turbo` не нужен.
+- Начинать с коротких роликов (3–4 с) и ~960×544, выше 768p (1344×768) не поднимать.
+- При нехватке памяти запускать `.\scripts\run.ps1 --lowvram`.
+- На этом железе связка ещё не запускалась.
 
 ### Персонаж по референсам (ref2va)
 
