@@ -5,11 +5,13 @@
 Токены берутся из переменных окружения или файла .env в корне репозитория.
 """
 import argparse
+import http.client
 import json
 import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -53,16 +55,15 @@ def file_name(spec):
     return Path(urllib.parse.urlparse(spec["url"]).path).name
 
 
-def download(spec, target):
-    if target.exists():
-        print(f"  уже есть: {target.name}")
-        return
-    part = target.with_name(target.name + ".part")
+def download_once(spec, target, part):
+    """Одна попытка; возвращает True, если файл скачан целиком."""
     offset = part.stat().st_size if part.exists() else 0
     req = build_request(spec)
     if offset:
         req.add_header("Range", f"bytes={offset}-")
     with urllib.request.urlopen(req, timeout=60) as resp:
+        if offset and resp.status == 416:
+            return True  # .part уже полный
         if offset and resp.status != 206:
             offset = 0  # сервер не поддержал докачку, начинаем заново
         total = resp.length + offset if resp.length else None
@@ -76,7 +77,30 @@ def download(spec, target):
                 pct = f"{done * 100 / total:5.1f}%" if total else ""
                 print(f"\r  {target.name}: {done / 1e9:6.2f} GB {pct} {speed:6.1f} MB/s", end="", flush=True)
     print()
-    part.replace(target)
+    # обрыв соединения выглядит как обычный конец потока: сверяем размер
+    return total is None or done == total
+
+
+def download(spec, target, attempts=20):
+    if target.exists():
+        print(f"  уже есть: {target.name}")
+        return
+    part = target.with_name(target.name + ".part")
+    for attempt in range(1, attempts + 1):
+        try:
+            if download_once(spec, target, part):
+                part.replace(target)
+                return
+            print(f"  обрыв, докачиваю ({attempt}/{attempts})")
+        except urllib.error.HTTPError as e:
+            if e.code == 416 and part.exists():
+                part.replace(target)
+                return
+            raise
+        except (OSError, http.client.HTTPException) as e:
+            print(f"\n  ошибка сети: {e}, докачиваю ({attempt}/{attempts})")
+        time.sleep(5)
+    sys.exit(f"Не удалось скачать {target.name}, .part сохранён, перезапустите для докачки")
 
 
 def main():
