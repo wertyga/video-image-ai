@@ -31,4 +31,3 @@ desktop.ini
 node_modules/
 /api/dist/
 /api/data/
-/datasets/*/images_*/
