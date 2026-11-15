@@ -8,7 +8,8 @@
         "vae",
         "lora_nsfw_v2",
         "lora_glamour_realism",
-        "lora_film_texture"
+        "lora_film_texture",
+        "upscale_ultrasharp_v2"
       ]
     },
     "server": {
@@ -19,7 +20,8 @@
         "vae",
         "lora_nsfw_v2",
         "lora_glamour_realism",
-        "lora_film_texture"
+        "lora_film_texture",
+        "upscale_ultrasharp_v2"
       ]
     },
     "h3-local": {
@@ -219,6 +221,10 @@
       "dir": "loras",
       "name": "krea2_film_texture_qwen21.safetensors",
       "auth": "civitai"
+    },
+    "upscale_ultrasharp_v2": {
+      "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.safetensors",
+      "dir": "upscale_models"
     }
   }
 }
