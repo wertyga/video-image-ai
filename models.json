@@ -7,7 +7,8 @@
         "te_int8",
         "vae",
         "lora_nsfw_v2",
-        "lora_glamour_realism"
+        "lora_glamour_realism",
+        "lora_film_texture"
       ]
     },
     "server": {
@@ -17,7 +18,8 @@
         "te_bf16",
         "vae",
         "lora_nsfw_v2",
-        "lora_glamour_realism"
+        "lora_glamour_realism",
+        "lora_film_texture"
       ]
     },
     "h3-local": {
@@ -211,6 +213,12 @@
     "h3_turbo_4step_768p": {
       "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors",
       "dir": "loras"
+    },
+    "lora_film_texture": {
+      "url": "https://civitai.com/api/download/models/3416647?fileId=3309756",
+      "dir": "loras",
+      "name": "krea2_film_texture_qwen21.safetensors",
+      "auth": "civitai"
     }
   }
 }
