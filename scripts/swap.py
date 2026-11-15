@@ -1,0 +1,57 @@
+"""Замена модели на фото персонажем с LoRA: workflow qwen21_character_swap_local.json через запущенный ComfyUI.
+Модель копирует ракурс головы с портрета, поэтому портрет выбирается под сцену (--face), размер берётся с фото.
+
+  python scripts/swap.py --image scene.jpg --face right --count 2 -p "Replace the woman in <image1> ..." -n "..."
+С --lora-only портрет и фигура не подаются, лицо даёт только LoRA, фигура задаётся текстом.
+"""
+import argparse
+import json
+import random
+import sys
+from pathlib import Path
+
+from generate import ROOT, post, upload_image
+
+FACES = ["front", "left", "right", "profile_left", "profile_right"]
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", required=True, type=Path, help="фото сцены")
+    parser.add_argument("--face", choices=FACES, help="куда смотрит лицо на сцене, от зрителя")
+    parser.add_argument("--lora-only", action="store_true", help="без портрета и референса фигуры")
+    parser.add_argument("--character", default="nastiya")
+    parser.add_argument("--body", default="nastiya_body_03.png")
+    parser.add_argument("-p", "--prompt", required=True)
+    parser.add_argument("-n", "--negative")
+    parser.add_argument("--count", type=int, default=1)
+    parser.add_argument("--seed", type=int, help="по умолчанию случайный")
+    parser.add_argument("--host", default="http://127.0.0.1:8188")
+    args = parser.parse_args()
+    if not args.lora_only and args.face is None:
+        parser.error("нужен --face или --lora-only")
+
+    dataset = ROOT / "datasets" / args.character
+    workflow = json.loads((ROOT / "workflows" / "qwen21_character_swap_local.json").read_text(encoding="utf-8"))
+    workflow["20"]["inputs"]["image"] = upload_image(args.host, args.image)
+    if args.lora_only:
+        for node in ("21", "22", "23", "24"):
+            del workflow[node]
+        del workflow["5"]["inputs"]["images.image_2"]
+        del workflow["5"]["inputs"]["images.image_3"]
+    else:
+        workflow["21"]["inputs"]["image"] = upload_image(args.host, dataset / "faces" / f"{args.face}.png")
+        workflow["23"]["inputs"]["image"] = upload_image(args.host, dataset / "body" / args.body)
+    workflow["5"]["inputs"]["prompt"] = args.prompt
+    if args.negative is not None:
+        workflow["5"]["inputs"]["negative_prompt"] = args.negative
+    seed = args.seed if args.seed is not None else random.randrange(2**48)
+    for i in range(args.count):
+        workflow["7"]["inputs"]["seed"] = seed + i
+        post(f"{args.host}/prompt", {"prompt": workflow})
+        print(f"в очереди: seed={seed + i}")
+
+
+if __name__ == "__main__":
+    main()

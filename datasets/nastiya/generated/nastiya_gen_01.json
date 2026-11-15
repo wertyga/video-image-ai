@@ -1,0 +1,1 @@
+{"prompt": "Replace the woman in <image1> with nst woman, keep the same pose, outfit, background and lighting, but change her figure: natural curvy figure, full natural breasts, slim waist.", "lora": "nastiya_v2.safetensors", "strength": 1.0, "nsfw": 0.0, "skin": 0.6, "seed": 154908673321848, "ref": "nastiya_genref_04.png", "denoise": null}
