@@ -85,7 +85,7 @@
     },
     "inputs": {
       "model": [
-        "31",
+        "32",
         0
       ],
       "positive": [
@@ -250,6 +250,20 @@
         0
       ],
       "filename_prefix": "nastiya_swap_4k"
+    }
+  },
+  "32": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Anatomy LoRA (0 - выкл, 0.7-1.0 - ню)"
+    },
+    "inputs": {
+      "model": [
+        "31",
+        0
+      ],
+      "lora_name": "qwen21_anatomy_v2.safetensors",
+      "strength_model": 0.0
     }
   }
 }

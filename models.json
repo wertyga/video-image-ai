@@ -9,7 +9,8 @@
         "lora_nsfw_v2",
         "lora_glamour_realism",
         "lora_film_texture",
-        "upscale_ultrasharp_v2"
+        "upscale_ultrasharp_v2",
+        "lora_anatomy_v2"
       ]
     },
     "server": {
@@ -21,7 +22,8 @@
         "lora_nsfw_v2",
         "lora_glamour_realism",
         "lora_film_texture",
-        "upscale_ultrasharp_v2"
+        "upscale_ultrasharp_v2",
+        "lora_anatomy_v2"
       ]
     },
     "h3-local": {
@@ -225,6 +227,12 @@
     "upscale_ultrasharp_v2": {
       "url": "https://huggingface.co/Kim2091/UltraSharpV2/resolve/main/4x-UltraSharpV2.safetensors",
       "dir": "upscale_models"
+    },
+    "lora_anatomy_v2": {
+      "url": "https://civitai.com/api/download/models/3377365?fileId=3265734",
+      "dir": "loras",
+      "name": "qwen21_anatomy_v2.safetensors",
+      "auth": "civitai"
     }
   }
 }
