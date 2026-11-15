@@ -1,4 +1,4 @@
-# nastiya v3: очищенный датасет (30 кадров, лицо сверено с refs/nastiya_01.png), арендный GPU 48GB+, bf16 без квантования.
+# nastiya v3: датасет images_v3: 30 очищенных кадров + 18 новых (одежда в полный рост и ню, лицо сверено с refs/nastiya_01.png), арендный GPU 48GB+, bf16 без квантования.
 # Запуск на сервере: ./scripts/train_lora.sh training/nastiya_v3.yaml
 job: extension
 config:
