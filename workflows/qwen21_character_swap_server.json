@@ -12,7 +12,7 @@
   "2": {
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
-      "title": "NSFW LoRA"
+      "title": "NSFW LoRA (0.8 - ню, 0 - одетые)"
     },
     "inputs": {
       "model": [
@@ -20,7 +20,7 @@
         0
       ],
       "lora_name": "nsfw_qwen21_thesealpacas_v2.safetensors",
-      "strength_model": 0.0
+      "strength_model": 0.8
     }
   },
   "3": {
@@ -50,8 +50,8 @@
         "3",
         0
       ],
-      "prompt": "Replace the woman in <image1> with nst woman. Use <image2> as a reference for her face and hair and <image3> only as a reference for her body shape: natural curvy figure, medium-full breasts, slim waist. Keep the exact pose, framing and camera angle of <image1>: she is lying on her back in a bridge pose, hips raised, knees bent, arms along her body, and her head rests sideways on the fabric at the right side of the frame, exactly where the head is in <image1>, seen from the same angle, looking at the camera. Her breasts are fully covered by the bra: full-coverage lined black polka-dot bra cups, nothing exposed. Same black polka-dot lingerie, garter belt, fishnet ankle socks and lace wrist cuffs, same fabric, curtain backdrop and studio lighting as <image1>.",
-      "negative_prompt": "exposed breasts, nipples, areola, topless, bra pulled down, see-through bra, blurry, lowres, deformed anatomy, extra fingers, watermark, text",
+      "prompt": "Replace the woman in <image1> with nst woman: slim but soft natural figure, not skinny, no visible ribs, slim hips and thighs, natural medium-sized breasts with a soft natural shape, realistic proportions, olive skin. Keep the exact pose, framing and camera angle of <image1>: [POSE, WHERE THE HEAD IS AND WHERE SHE LOOKS]. [CLOTHES], same background and lighting as <image1>. Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.",
+      "negative_prompt": "plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text",
       "resolution": 0,
       "vae": [
         "4",
@@ -59,14 +59,6 @@
       ],
       "images.image_1": [
         "6",
-        0
-      ],
-      "images.image_2": [
-        "22",
-        0
-      ],
-      "images.image_3": [
-        "24",
         0
       ]
     }
@@ -148,30 +140,6 @@
       "image": "example.png"
     }
   },
-  "21": {
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Face image 2"
-    },
-    "inputs": {
-      "image": "nastiya_01.png"
-    }
-  },
-  "22": {
-    "class_type": "ImageScaleToTotalPixels",
-    "_meta": {
-      "title": "Reference size"
-    },
-    "inputs": {
-      "image": [
-        "21",
-        0
-      ],
-      "upscale_method": "lanczos",
-      "megapixels": 1.0,
-      "resolution_steps": 32
-    }
-  },
   "30": {
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
@@ -184,30 +152,6 @@
       ],
       "lora_name": "nastiya_v3.safetensors",
       "strength_model": 1.0
-    }
-  },
-  "23": {
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Body image 3"
-    },
-    "inputs": {
-      "image": "nastiya_body_03.png"
-    }
-  },
-  "24": {
-    "class_type": "ImageScaleToTotalPixels",
-    "_meta": {
-      "title": "Reference size 3"
-    },
-    "inputs": {
-      "image": [
-        "23",
-        0
-      ],
-      "upscale_method": "lanczos",
-      "megapixels": 1.0,
-      "resolution_steps": 32
     }
   },
   "31": {

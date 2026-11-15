@@ -39,11 +39,13 @@ def main():
     dataset = ROOT / "datasets" / args.character
     workflow = json.loads((ROOT / "workflows" / f"qwen21_character_swap_{'server' if args.server else 'local'}.json").read_text(encoding="utf-8"))
     workflow["20"]["inputs"]["image"] = upload_image(args.host, args.image)
+    if args.server and not args.lora_only:
+        parser.error("серверный флоу без референсов: используйте --lora-only")
     if args.lora_only:
         for node in ("21", "22", "23", "24"):
-            del workflow[node]
-        del workflow["5"]["inputs"]["images.image_2"]
-        del workflow["5"]["inputs"]["images.image_3"]
+            workflow.pop(node, None)
+        workflow["5"]["inputs"].pop("images.image_2", None)
+        workflow["5"]["inputs"].pop("images.image_3", None)
     else:
         workflow["21"]["inputs"]["image"] = upload_image(args.host, dataset / "faces" / f"{args.face}.png")
         workflow["23"]["inputs"]["image"] = upload_image(args.host, dataset / "body" / args.body)
