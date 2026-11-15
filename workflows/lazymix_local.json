@@ -1,28 +1,33 @@
 {
   "1": {
     "class_type": "CheckpointLoaderSimple",
-    "_meta": {"title": "LazyMix+ v4 (SD 1.5, VAE inside)"},
+    "_meta": {"title": "LazyMix+ v4 (SD 1.5)"},
     "inputs": {"ckpt_name": "LazyPlus_V4_fp16_VAE.safetensors"}
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "_meta": {"title": "VAE ft-mse-840000 (как у автора в примерах)"},
+    "inputs": {"vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"}
   },
   "3": {
     "class_type": "CLIPTextEncode",
     "_meta": {"title": "Positive"},
     "inputs": {
       "clip": ["1", 1],
-      "text": "amateur photo of a 28 year old woman, natural skin texture, candid, soft natural light"
+      "text": "amateur, beautiful face, 28 year old woman, analog style, instagram photo, in her messy bedroom, RAW, real life photo, r/nude_selfie, reddit, medium quality, normal aesthetic, shot on iPhone, film grain"
     }
   },
   "4": {
     "class_type": "CLIPTextEncode",
-    "_meta": {"title": "Negative"},
+    "_meta": {"title": "Negative (автора + защита от юных лиц)"},
     "inputs": {
       "clip": ["1", 1],
-      "text": "child, teen, underage, young-looking, childlike face, cartoon, anime, 3d render, painting, illustration, deformed, bad anatomy, extra limbs, extra fingers, mutated hands, disfigured face, blurry, lowres, jpeg artifacts, watermark, text, signature, oversaturated, plastic skin"
+      "text": "child, teen, underage, childlike face, bad art, ugly face, messed up face, poorly drawn hands, bad hands, professional photo shoot, makeup, photoshop, doll, plastic_doll, silicone, anime, cartoon, fake, filter, airbrush, 3d max, featureless, colourless, impassive, shaders, watermark, text"
     }
   },
   "5": {
     "class_type": "EmptyLatentImage",
-    "_meta": {"title": "Base size (SD 1.5 native ~512x768)"},
+    "_meta": {"title": "Base size 512x768"},
     "inputs": {"width": 512, "height": 768, "batch_size": 1}
   },
   "6": {
@@ -34,16 +39,16 @@
       "negative": ["4", 0],
       "latent_image": ["5", 0],
       "seed": 0,
-      "steps": 28,
-      "cfg": 6.0,
-      "sampler_name": "dpmpp_2m",
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_sde",
       "scheduler": "karras",
       "denoise": 1.0
     }
   },
   "7": {
     "class_type": "LatentUpscaleBy",
-    "_meta": {"title": "Hires fix x1.5"},
+    "_meta": {"title": "Hires fix x1.5 (Latent)"},
     "inputs": {"samples": ["6", 0], "upscale_method": "nearest-exact", "scale_by": 1.5}
   },
   "8": {
@@ -55,16 +60,16 @@
       "negative": ["4", 0],
       "latent_image": ["7", 0],
       "seed": 0,
-      "steps": 20,
-      "cfg": 6.0,
-      "sampler_name": "dpmpp_2m",
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_sde",
       "scheduler": "karras",
-      "denoise": 0.5
+      "denoise": 0.4
     }
   },
   "9": {
     "class_type": "VAEDecode",
-    "inputs": {"samples": ["8", 0], "vae": ["1", 2]}
+    "inputs": {"samples": ["8", 0], "vae": ["2", 0]}
   },
   "10": {
     "class_type": "SaveImage",

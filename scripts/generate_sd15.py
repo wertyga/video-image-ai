@@ -3,6 +3,7 @@
   python scripts/generate_sd15.py -p "amateur photo of a 28 year old woman ..." --count 4
   python scripts/generate_sd15.py -p "..." --hires 0                      # без hires fix, 512x768
   python scripts/generate_sd15.py -p "..." --lora my_sd15_lora.safetensors:0.8
+Промпт оборачивается тегами любительского стиля автора (STYLE), отключается --no-style.
 SD 1.5 рисует в ~512x768, hires fix доводит до x1.5 (768x1152). LoRA нужны именно под SD 1.5.
 Миксы на SD 1.5 тянут лица в юность: пишите возраст явно ("28 year old woman"), в негативе по умолчанию
 стоит защита (child, teen, ...). Если задаёте свой -n, оставьте эти слова.
@@ -19,6 +20,9 @@ from pathlib import Path
 from generate import post
 
 ROOT = Path(__file__).resolve().parent.parent
+# стиль из примеров автора модели: без него LazyMix уходит в глянцевую студийную картинку
+STYLE = ("analog style, instagram photo, RAW, real life photo, r/nude_selfie, reddit, "
+         "medium quality, normal aesthetic, shot on iPhone, film grain")
 
 
 def main():
@@ -33,14 +37,16 @@ def main():
     parser.add_argument("--steps", type=int)
     parser.add_argument("--cfg", type=float)
     parser.add_argument("--hires", type=float, default=1.5, help="масштаб hires fix, 0 - выключить")
-    parser.add_argument("--hires-denoise", type=float, default=0.5)
+    parser.add_argument("--hires-denoise", type=float, default=0.4)
+    parser.add_argument("--sampler", help="dpmpp_sde (по умолчанию) или dpmpp_2m_sde, оба с karras")
+    parser.add_argument("--no-style", action="store_true", help="не добавлять теги любительского стиля автора")
     parser.add_argument("--lora", action="append", default=[], metavar="FILE[:STRENGTH]",
                         help="LoRA под SD 1.5 из ComfyUI/models/loras, можно несколько раз")
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
 
     wf = json.loads((ROOT / "workflows" / "lazymix_local.json").read_text(encoding="utf-8"))
-    wf["3"]["inputs"]["text"] = args.prompt
+    wf["3"]["inputs"]["text"] = args.prompt if args.no_style else f"amateur, {args.prompt}, {STYLE}"
     if args.negative is not None:
         wf["4"]["inputs"]["text"] = args.negative
     wf["5"]["inputs"].update(width=args.width, height=args.height)
@@ -49,6 +55,8 @@ def main():
         base["steps"] = args.steps
     if args.cfg is not None:
         base["cfg"] = hires["cfg"] = args.cfg
+    if args.sampler:
+        base["sampler_name"] = hires["sampler_name"] = args.sampler
 
     model, clip = ["1", 0], ["1", 1]
     for i, spec in enumerate(args.lora):

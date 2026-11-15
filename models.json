@@ -47,7 +47,8 @@
     "lazymix": {
       "description": "LazyMix+ v4 (SD 1.5, реалистичные любительские ню), fp16 с вшитым VAE (~4 ГБ), любая карта от 6 ГБ",
       "files": [
-        "lazymix_v4"
+        "lazymix_v4",
+        "sd15_vae_ft_mse"
       ]
     },
     "h3-server": {
@@ -131,6 +132,10 @@
       "dir": "checkpoints",
       "name": "LazyPlus_V4_fp16_VAE.safetensors",
       "auth": "civitai"
+    },
+    "sd15_vae_ft_mse": {
+      "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors",
+      "dir": "vae"
     },
     "lora_glamour_realism": {
       "url": "https://civitai.com/api/download/models/3385496?fileId=3274312",

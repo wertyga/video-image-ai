@@ -100,7 +100,10 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
 ## Картинки на SD 1.5: LazyMix+ (`lazymix`)
 
 Отдельный флоу `workflows/lazymix_local.json`: чекпойнт LazyMix+ v4 (Civitai, нужен `CIVITAI_TOKEN`),
-база 512×768, затем hires fix ×1.5 до 768×1152, dpmpp_2m karras, 28+20 шагов, CFG 6.
+настройки взяты из метаданных примеров автора: база 512×768, hires fix ×1.5 (Latent, denoise 0.4)
+до 768×1152, DPM++ SDE Karras, 30 шагов, CFG 7, отдельный VAE vae-ft-mse-840000.
+Скрипт сам оборачивает промпт тегами любительского стиля автора (`amateur ... r/nude_selfie, reddit,
+medium quality, shot on iPhone, film grain`), без них модель уходит в глянец; `--no-style` отключает.
 
 ```
 .\scripts\setup.ps1 lazymix
@@ -112,6 +115,7 @@ python scripts/generate_sd15.py -p "..." --lora some_sd15_lora.safetensors:0.8
 - LoRA от Qwen/Flux/SDXL сюда не подходят, только SD 1.5.
 - Модель тянет лица в юность: пишите возраст явно; в негативе по умолчанию стоит защита (child, teen, ...).
 - Охотно раздевает даже без просьбы: для одетых кадров добавьте `nude, naked` в негатив (`-n`, сохранив стандартные слова).
+  Для одетых кадров лучше и `--no-style`: тег `r/nude_selfie` тянет к ню.
 
 ## Видео: MiniMax H3
 
