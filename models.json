@@ -44,6 +44,12 @@
         "h3_lora_digital_art"
       ]
     },
+    "lazymix": {
+      "description": "LazyMix+ v4 (SD 1.5, реалистичные любительские ню), fp16 с вшитым VAE (~4 ГБ), любая карта от 6 ГБ",
+      "files": [
+        "lazymix_v4"
+      ]
+    },
     "h3-server": {
       "description": "MiniMax H3 видео + NSFW LoRA, int8 (~53 ГБ скачать), GPU 48GB+",
       "files": [
@@ -118,6 +124,12 @@
       "url": "https://civitai.com/api/download/models/3357315?fileId=3244894",
       "dir": "loras",
       "name": "nsfw_qwen21_thesealpacas_v2.safetensors",
+      "auth": "civitai"
+    },
+    "lazymix_v4": {
+      "url": "https://civitai.com/api/download/models/300972?fileId=238469",
+      "dir": "checkpoints",
+      "name": "LazyPlus_V4_fp16_VAE.safetensors",
       "auth": "civitai"
     },
     "lora_glamour_realism": {

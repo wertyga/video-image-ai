@@ -1,0 +1,99 @@
+"""Генерация на SD 1.5 чекпойнте (LazyMix+) через запущенный ComfyUI, с hires fix.
+
+  python scripts/generate_sd15.py -p "amateur photo of a 28 year old woman ..." --count 4
+  python scripts/generate_sd15.py -p "..." --hires 0                      # без hires fix, 512x768
+  python scripts/generate_sd15.py -p "..." --lora my_sd15_lora.safetensors:0.8
+SD 1.5 рисует в ~512x768, hires fix доводит до x1.5 (768x1152). LoRA нужны именно под SD 1.5.
+Миксы на SD 1.5 тянут лица в юность: пишите возраст явно ("28 year old woman"), в негативе по умолчанию
+стоит защита (child, teen, ...). Если задаёте свой -n, оставьте эти слова.
+Картинки сохраняются в output/.
+"""
+import argparse
+import json
+import random
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+from generate import post
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--prompt", required=True)
+    parser.add_argument("-n", "--negative")
+    parser.add_argument("--count", type=int, default=1)
+    parser.add_argument("--seed", type=int, help="по умолчанию случайный")
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--height", type=int, default=768)
+    parser.add_argument("--steps", type=int)
+    parser.add_argument("--cfg", type=float)
+    parser.add_argument("--hires", type=float, default=1.5, help="масштаб hires fix, 0 - выключить")
+    parser.add_argument("--hires-denoise", type=float, default=0.5)
+    parser.add_argument("--lora", action="append", default=[], metavar="FILE[:STRENGTH]",
+                        help="LoRA под SD 1.5 из ComfyUI/models/loras, можно несколько раз")
+    parser.add_argument("--host", default="http://127.0.0.1:8188")
+    args = parser.parse_args()
+
+    wf = json.loads((ROOT / "workflows" / "lazymix_local.json").read_text(encoding="utf-8"))
+    wf["3"]["inputs"]["text"] = args.prompt
+    if args.negative is not None:
+        wf["4"]["inputs"]["text"] = args.negative
+    wf["5"]["inputs"].update(width=args.width, height=args.height)
+    base, hires = wf["6"]["inputs"], wf["8"]["inputs"]
+    if args.steps:
+        base["steps"] = args.steps
+    if args.cfg is not None:
+        base["cfg"] = hires["cfg"] = args.cfg
+
+    model, clip = ["1", 0], ["1", 1]
+    for i, spec in enumerate(args.lora):
+        name, _, strength = spec.partition(":")
+        node_id = str(30 + i)
+        s = float(strength or 1.0)
+        wf[node_id] = {"class_type": "LoraLoader", "_meta": {"title": f"LoRA {i + 1}"},
+                       "inputs": {"model": model, "clip": clip, "lora_name": name,
+                                  "strength_model": s, "strength_clip": s}}
+        model, clip = [node_id, 0], [node_id, 1]
+    base["model"] = hires["model"] = model
+    wf["3"]["inputs"]["clip"] = wf["4"]["inputs"]["clip"] = clip
+
+    if args.hires:
+        wf["7"]["inputs"]["scale_by"] = args.hires
+        hires["denoise"] = args.hires_denoise
+    else:
+        wf["9"]["inputs"]["samples"] = ["6", 0]
+        del wf["7"], wf["8"]
+
+    seed = args.seed if args.seed is not None else random.randrange(2**48)
+    ids = []
+    for i in range(args.count):
+        base["seed"] = seed + i
+        if "8" in wf:
+            hires["seed"] = seed + i
+        ids.append(post(f"{args.host}/prompt", {"prompt": wf})["prompt_id"])
+        print(f"в очереди: seed={seed + i}")
+
+    pending = set(ids)
+    while pending:
+        time.sleep(1)
+        for prompt_id in list(pending):
+            with urllib.request.urlopen(f"{args.host}/history/{prompt_id}") as resp:
+                history = json.load(resp).get(prompt_id)
+            if not history:
+                continue
+            pending.discard(prompt_id)
+            status = history.get("status", {})
+            if status.get("status_str") == "error":
+                print("ошибка:", json.dumps(status.get("messages"), ensure_ascii=False)[:2000])
+            for output in history.get("outputs", {}).values():
+                for image in output.get("images", []):
+                    print("готово:", ROOT / "output" / image.get("subfolder", "") / image["filename"])
+
+
+if __name__ == "__main__":
+    main()

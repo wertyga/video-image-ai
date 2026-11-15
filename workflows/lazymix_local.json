@@ -1,0 +1,73 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {"title": "LazyMix+ v4 (SD 1.5, VAE inside)"},
+    "inputs": {"ckpt_name": "LazyPlus_V4_fp16_VAE.safetensors"}
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Positive"},
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "amateur photo of a 28 year old woman, natural skin texture, candid, soft natural light"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "Negative"},
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "child, teen, underage, young-looking, childlike face, cartoon, anime, 3d render, painting, illustration, deformed, bad anatomy, extra limbs, extra fingers, mutated hands, disfigured face, blurry, lowres, jpeg artifacts, watermark, text, signature, oversaturated, plastic skin"
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "_meta": {"title": "Base size (SD 1.5 native ~512x768)"},
+    "inputs": {"width": 512, "height": 768, "batch_size": 1}
+  },
+  "6": {
+    "class_type": "KSampler",
+    "_meta": {"title": "Base pass"},
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["5", 0],
+      "seed": 0,
+      "steps": 28,
+      "cfg": 6.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "LatentUpscaleBy",
+    "_meta": {"title": "Hires fix x1.5"},
+    "inputs": {"samples": ["6", 0], "upscale_method": "nearest-exact", "scale_by": 1.5}
+  },
+  "8": {
+    "class_type": "KSampler",
+    "_meta": {"title": "Hires pass"},
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["7", 0],
+      "seed": 0,
+      "steps": 20,
+      "cfg": 6.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.5
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {"samples": ["8", 0], "vae": ["1", 2]}
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {"images": ["9", 0], "filename_prefix": "lazymix"}
+  }
+}

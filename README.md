@@ -14,6 +14,7 @@ MiniMax H3 + [NSFW Unlocked LoRA v2](https://civitai.com/models/2925727) для 
 | `h3-ref-local` | видео по референсам, то же железо | H3 ref2va pruned int8 / nvfp4, turbo 4 шага | ~23 ГБ сверх `h3-local` |
 | `h3-server` | видео, 48GB+ VRAM | H3 pruned int8 / Qwen3-VL 32B int8 | ~54 ГБ |
 | `h3-server-bf16` | видео, 80GB VRAM (A100 80GB, H100) | H3 pruned bf16 / bf16 (максимальное качество) | ~100 ГБ |
+| `lazymix` | любительские ню на SD 1.5, любая карта от 6 ГБ | LazyMix+ v4 fp16, VAE вшит | ~4 ГБ |
 
 Профили можно ставить вместе: `./scripts/setup.sh server h3-server`.
 
@@ -95,6 +96,22 @@ python scripts/generate.py --profile server -p "..." --count 4 --width 832 --hei
 - sampler **er_sde** (на euler результат плохой), scheduler **beta**
 - триггер-слов нет; обучен в основном на откровенных сценах, лучше работают явные описания
 - разрешение кратно 32; модель поддерживает до 2048×2048
+
+## Картинки на SD 1.5: LazyMix+ (`lazymix`)
+
+Отдельный флоу `workflows/lazymix_local.json`: чекпойнт LazyMix+ v4 (Civitai, нужен `CIVITAI_TOKEN`),
+база 512×768, затем hires fix ×1.5 до 768×1152, dpmpp_2m karras, 28+20 шагов, CFG 6.
+
+```
+.\scripts\setup.ps1 lazymix
+python scripts/generate_sd15.py -p "amateur photo of a 28 year old woman ..." --count 4
+python scripts/generate_sd15.py -p "..." --hires 0                       # быстро, без hires fix
+python scripts/generate_sd15.py -p "..." --lora some_sd15_lora.safetensors:0.8
+```
+
+- LoRA от Qwen/Flux/SDXL сюда не подходят, только SD 1.5.
+- Модель тянет лица в юность: пишите возраст явно; в негативе по умолчанию стоит защита (child, teen, ...).
+- Охотно раздевает даже без просьбы: для одетых кадров добавьте `nude, naked` в негатив (`-n`, сохранив стандартные слова).
 
 ## Видео: MiniMax H3
 
