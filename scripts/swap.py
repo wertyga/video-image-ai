@@ -32,6 +32,7 @@ def main():
                         help="bf16-флоу qwen21_character_swap_server.json (ComfyUI на сервере, через туннель --host)")
     parser.add_argument("--lora", help="LoRA персонажа вместо указанной во флоу, например nastiya_v3_000002500.safetensors")
     parser.add_argument("--nsfw", type=float, help="сила NSFW LoRA (по умолчанию 0)")
+    parser.add_argument("--anatomy", type=float, help="сила Anatomy LoRA (серверный флоу, по умолчанию 0; 0.8 если видны гениталии)")
     args = parser.parse_args()
     if not args.lora_only and args.face is None:
         parser.error("нужен --face или --lora-only")
@@ -51,6 +52,8 @@ def main():
         workflow["23"]["inputs"]["image"] = upload_image(args.host, dataset / "body" / args.body)
     if args.lora:
         workflow["30"]["inputs"]["lora_name"] = args.lora
+    if args.anatomy is not None:
+        workflow["32"]["inputs"]["strength_model"] = args.anatomy
     if args.nsfw is not None:
         workflow["2"]["inputs"]["strength_model"] = args.nsfw
     workflow["5"]["inputs"]["prompt"] = args.prompt
