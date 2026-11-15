@@ -7,6 +7,8 @@
 SD 1.5 рисует в ~512x768, hires fix доводит до x1.5 (768x1152). LoRA нужны именно под SD 1.5.
 Миксы на SD 1.5 тянут лица в юность: пишите возраст явно ("28 year old woman"), в негативе по умолчанию
 стоит защита (child, teen, ...). Если задаёте свой -n, оставьте эти слова.
+  python scripts/generate_sd15.py -p "photo of nst woman ..." --lora nastiya_sd15.safetensors:0.9 --face
+--face перерисовывает кроп лица в 512x512 с той же LoRA и вклеивает (как ADetailer), похожесть заметно выше.
 Картинки сохраняются в output/.
 """
 import argparse
@@ -42,6 +44,10 @@ def main():
     parser.add_argument("--no-style", action="store_true", help="не добавлять теги любительского стиля автора")
     parser.add_argument("--lora", action="append", default=[], metavar="FILE[:STRENGTH]",
                         help="LoRA под SD 1.5 из ComfyUI/models/loras, можно несколько раз")
+    parser.add_argument("--face", action="store_true",
+                        help="доработать лицо: перерисовать кроп 512x512 с той же LoRA (как ADetailer)")
+    parser.add_argument("--face-denoise", type=float, default=0.45,
+                        help="сила перерисовки лица: 0.35 - бережно, 0.55 - сильнее к LoRA")
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
 
@@ -78,12 +84,12 @@ def main():
         del wf["7"], wf["8"]
 
     seed = args.seed if args.seed is not None else random.randrange(2**48)
-    ids = []
+    ids = {}
     for i in range(args.count):
         base["seed"] = seed + i
         if "8" in wf:
             hires["seed"] = seed + i
-        ids.append(post(f"{args.host}/prompt", {"prompt": wf})["prompt_id"])
+        ids[post(f"{args.host}/prompt", {"prompt": wf})["prompt_id"]] = seed + i
         print(f"в очереди: seed={seed + i}")
 
     pending = set(ids)
@@ -100,7 +106,15 @@ def main():
                 print("ошибка:", json.dumps(status.get("messages"), ensure_ascii=False)[:2000])
             for output in history.get("outputs", {}).values():
                 for image in output.get("images", []):
-                    print("готово:", ROOT / "output" / image.get("subfolder", "") / image["filename"])
+                    path = ROOT / "output" / image.get("subfolder", "") / image["filename"]
+                    if args.face:
+                        from face_fix import fix_face
+                        face_prompt = "close-up photo of the face, detailed face, " + wf["3"]["inputs"]["text"]
+                        fixed = fix_face(args.host, wf, path, face_prompt, ids[prompt_id], args.face_denoise)
+                        if fixed:
+                            print("  без доработки:", path)
+                            path = fixed
+                    print("готово:", path)
 
 
 if __name__ == "__main__":

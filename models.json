@@ -48,7 +48,8 @@
       "description": "LazyMix+ v4 (SD 1.5, реалистичные любительские ню), fp16 с вшитым VAE (~4 ГБ), любая карта от 6 ГБ",
       "files": [
         "lazymix_v4",
-        "sd15_vae_ft_mse"
+        "sd15_vae_ft_mse",
+        "yunet_face"
       ]
     },
     "h3-server": {
@@ -136,6 +137,10 @@
     "sd15_vae_ft_mse": {
       "url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors",
       "dir": "vae"
+    },
+    "yunet_face": {
+      "url": "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
+      "dir": "facedetect"
     },
     "lora_glamour_realism": {
       "url": "https://civitai.com/api/download/models/3385496?fileId=3274312",

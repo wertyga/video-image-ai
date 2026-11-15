@@ -112,7 +112,15 @@ python scripts/generate_sd15.py -p "..." --hires 0                       # бы�
 python scripts/generate_sd15.py -p "..." --lora some_sd15_lora.safetensors:0.8
 ```
 
-- LoRA от Qwen/Flux/SDXL сюда не подходят, только SD 1.5.
+- LoRA от Qwen/Flux/SDXL сюда не подходят, только SD 1.5. Своя: `training/nastiya_sd15.yaml` (локально, ~30 мин).
+- `--face`: доработка лица как ADetailer. Скрипт находит лицо (OpenCV YuNet), перерисовывает кроп 512×512
+  с той же LoRA (`--face-denoise`, по умолчанию 0.45) и вклеивает с мягкой маской. Для кадров в полный рост
+  похожесть на референс растёт примерно вдвое (0.25 → 0.5–0.6). Нужен `pip install opencv-python-headless` в `.venv`.
+- Персонажа с LoRA лучше писать с возрастом (`nst woman, 25 year old`), иначе лицо выходит старше.
+
+```
+python scripts/generate_sd15.py -p "full-body photo of nst woman, 25 year old, ..." --lora nastiya_sd15.safetensors:0.9 --face
+```
 - Модель тянет лица в юность: пишите возраст явно; в негативе по умолчанию стоит защита (child, teen, ...).
 - Охотно раздевает даже без просьбы: для одетых кадров добавьте `nude, naked` в негатив (`-n`, сохранив стандартные слова).
   Для одетых кадров лучше и `--no-style`: тег `r/nude_selfie` тянет к ню.
