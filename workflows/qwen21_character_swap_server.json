@@ -50,7 +50,7 @@
         "3",
         0
       ],
-      "prompt": "Replace the woman in <image1> with nst woman: slim but soft natural figure, not skinny, no visible ribs, slim hips and thighs, natural medium-sized breasts with a soft natural shape, realistic proportions, olive skin. Keep the exact pose, framing and camera angle of <image1>: [POSE, WHERE THE HEAD IS AND WHERE SHE LOOKS]. [CLOTHES], same background and lighting as <image1>. Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.",
+      "prompt": "Replace the woman in <image1> with nst woman: slim but soft natural figure, not skinny, no visible ribs, slim hips and thighs, natural medium-sized breasts with a soft natural shape, realistic proportions, olive skin. Keep everything else exactly as in <image1>: the same pose, body position, head position and angle, gaze direction and facial expression, the same clothing and accessories (or the same nudity), the same framing, camera angle, background and lighting. Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.",
       "negative_prompt": "plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text",
       "resolution": 0,
       "vae": [
