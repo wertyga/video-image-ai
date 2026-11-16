@@ -8,6 +8,9 @@ import argparse
 import json
 import random
 import sys
+import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from generate import ROOT, post, upload_image
@@ -34,6 +37,10 @@ def main():
     parser.add_argument("--nsfw", type=float, help="сила NSFW LoRA (по умолчанию 0)")
     parser.add_argument("--keep-pose", type=float, metavar="DENOISE",
                         help="начать с латента фото (img2img): руки и ноги как на фото. 0.85; 0.9 если проступает исходная модель")
+    parser.add_argument("--size", choices=["1mp", "2k", "4k", "all"], default="1mp",
+                        help="серверный флоу: какие размеры сохранять (апскейл 4x-UltraSharpV2), по умолчанию только 1 Мп")
+    parser.add_argument("--out", type=Path, help="дождаться и скачать результаты в эту папку (нужно для сервера)")
+    parser.add_argument("--tag", default="nastiya_swap", help="префикс имён файлов")
     parser.add_argument("--anatomy", type=float, help="сила Anatomy LoRA (серверный флоу, по умолчанию 0; 0.8 если видны гениталии)")
     args = parser.parse_args()
     if not args.lora_only and args.face is None:
@@ -64,11 +71,51 @@ def main():
     workflow["5"]["inputs"]["prompt"] = args.prompt
     if args.negative is not None:
         workflow["5"]["inputs"]["negative_prompt"] = args.negative
+    if "40" in workflow:
+        keep = {"1mp": {"9"}, "2k": {"43"}, "4k": {"45"}, "all": {"9", "43", "45"}}[args.size]
+        if args.size == "2k":
+            keep.add("9")
+        for save, nodes in (("43", ("42", "43")), ("45", ("44", "45"))):
+            if save not in keep:
+                for n in nodes:
+                    workflow.pop(n, None)
+        if "43" not in workflow and "45" not in workflow:
+            workflow.pop("40", None)
+            workflow.pop("41", None)
     seed = args.seed if args.seed is not None else random.randrange(2**48)
+    ids = {}
     for i in range(args.count):
         workflow["7"]["inputs"]["seed"] = seed + i
-        post(f"{args.host}/prompt", {"prompt": workflow})
+        for node, suffix in (("9", ""), ("43", "_2k"), ("45", "_4k")):
+            if node in workflow:
+                workflow[node]["inputs"]["filename_prefix"] = f"{args.tag}{suffix}_s{seed + i}"
+        ids[post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"]] = seed + i
         print(f"в очереди: seed={seed + i}")
+    if args.out:
+        fetch(args.host, ids, args.out)
+
+
+def fetch(host, ids, out):
+    """Ждёт задания и скачивает картинки через /view (ComfyUI может быть на сервере)."""
+    out.mkdir(parents=True, exist_ok=True)
+    pending = set(ids)
+    while pending:
+        time.sleep(3)
+        for pid in list(pending):
+            with urllib.request.urlopen(f"{host}/history/{pid}") as resp:
+                h = json.load(resp).get(pid)
+            if not h:
+                continue
+            pending.discard(pid)
+            if h["status"].get("status_str") == "error":
+                print("ошибка:", json.dumps(h["status"].get("messages"), ensure_ascii=False)[-1500:])
+            for o in h.get("outputs", {}).values():
+                for im in o.get("images", []):
+                    q = urllib.parse.urlencode({"filename": im["filename"], "subfolder": im["subfolder"], "type": im["type"]})
+                    dst = out / im["filename"]
+                    with urllib.request.urlopen(f"{host}/view?{q}") as resp:
+                        dst.write_bytes(resp.read())
+                    print("готово:", dst)
 
 
 if __name__ == "__main__":
