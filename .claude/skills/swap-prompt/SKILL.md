@@ -65,6 +65,7 @@ COVER (одета в бельё, грудь должна быть закрыта
 plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, deformed anatomy, extra fingers, watermark, text
 ```
 - NEG_COVER (одета в бельё) — в начало: `exposed breasts, nipples, areola, topless, bra pulled down, see-through bra, `
+- Видны гениталии (Anatomy 0.8) — в начало: `penis, male genitalia, protruding labia, swollen genitals, malformed genitals, ` (без этого на части seed бывает выпирающий нарост).
 - Если вещь спущена, а модель её «надевает» — в начало запрет на надетое состояние: `fabric covering buttocks, panties worn, panties on hips, ` / `bra covering breasts, `.
 
 ## Запуск
