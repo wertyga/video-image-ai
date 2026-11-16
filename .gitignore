@@ -13,7 +13,7 @@ __pycache__/
 
 # Сгенерированные картинки: портреты персонажей и датасеты (подписи и настройки остаются в git)
 /characters/
-/datasets/*/images/
+/datasets/*/images*/
 /datasets/*/ref.png
 sheet.jpg
 
