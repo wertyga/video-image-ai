@@ -92,7 +92,7 @@
   .upload-btn:hover { border-color: var(--accent); }
   .upload-btn.disabled { opacity: .45; pointer-events: none; }
   .upload-btn input { display: none; }
-  .gen-fields { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr 1fr; gap: 14px; margin: 12px 0; }
+  .gen-fields { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1.2fr 1fr; gap: 14px; margin: 12px 0; }
   input[type=number] { width: 100%; margin-top: 4px; padding: 8px 10px; font: inherit; color: var(--text);
     background: var(--field); border: 1px solid var(--line); border-radius: 8px; }
   #gen-prompt { min-height: 80px; resize: vertical; }
@@ -184,22 +184,27 @@
       <textarea id="gen-prompt" spellcheck="false" placeholder="Photograph of nst woman sitting at a cafe table, wearing a beige knit sweater, looking directly at the camera, warm afternoon light, natural skin texture"></textarea>
       <div class="hint">Персонаж вызывается ключевым словом. Ракурс и взгляд лучше писать явно.</div>
     </label>
+    <div class="controls" style="margin-top:8px">
+      <button id="gen-describe" title="Claude смотрит на референс, пишет промпт под выбранный режим (без внешности персонажа) и выставляет силы LoRA">Промпт с референса</button>
+      <span class="hint" id="gen-describe-status">Сначала добавьте референс ниже</span>
+    </div>
     <div class="field" style="margin-top:12px">Референс <span class="hint">необязательно</span></div>
     <div class="photos" id="gen-ref">
       <label class="add">+ Картинка<br>или перетащить сюда<input type="file" accept="image/*"></label>
     </div>
     <div class="fields" id="gen-ref-fields" style="margin:12px 0 0">
       <label class="field">Режим
-        <select id="gen-mode"><option value="img2img">img2img — перерисовка, лицо от LoRA</option>
-          <option value="edit">edit — модель видит картинку как &lt;image1&gt;</option></select>
+        <select id="gen-mode"><option value="img2img">замена с позой с фото (как swap)</option>
+          <option value="edit">замена без привязки позы</option></select>
       </label>
       <label class="field" id="gen-denoise-field">Сила перерисовки
-        <input type="number" id="gen-denoise" min="0.05" max="1" step="0.05" value="0.65">
-        <div class="hint">0.55–0.7: композиция с картинки, лицо своё. Лицо чужое — выше, поза плывёт — ниже</div>
+        <input type="number" id="gen-denoise" min="0.05" max="1" step="0.05" value="0.95">
+        <div class="hint">0.95: поза с фото, лицо и волосы от LoRA. На 0.85–0.9 проступают чужие волосы; поза плывёт — 0.9, проступает — 1</div>
       </label>
     </div>
-    <div class="hint">Размер берётся с картинки. В img2img промпт обычный, с ключевым словом, без &lt;image1&gt;.
-      В edit: <b>Replace the woman in &lt;image1&gt; with nst woman, keep the pose, background and lighting</b> — но лицо тянется с картинки.</div>
+    <div class="hint">Размер берётся с картинки. Модель видит её как &lt;image1&gt;, промпт — шаблон замены:
+      <b>Replace the woman in &lt;image1&gt; with nst woman: … Keep everything else exactly as in &lt;image1&gt; …</b>
+      Проще всего — кнопка «Промпт с референса».</div>
     <div class="gen-fields">
       <label class="field">LoRA
         <select id="gen-lora"></select>
@@ -214,8 +219,12 @@
         <div class="hint">Пусто: 0.9 при nude/naked, иначе выкл.</div>
       </label>
       <label class="field">LoRA кожи
-        <input type="number" id="gen-skin" min="0" max="1.5" step="0.1" value="0.6">
-        <div class="hint">Против «пластика», 0.5–0.7. С ней CFG 2.5. 0 — выкл.</div>
+        <input type="number" id="gen-skin" min="0" max="1.5" step="0.1" value="0.5">
+        <div class="hint">film texture: поры вместо «пластика», 0.5. 0 — выкл.</div>
+      </label>
+      <label class="field">Anatomy LoRA
+        <input type="number" id="gen-anatomy" min="0" max="1.5" step="0.1" value="0">
+        <div class="hint">0.8, если видны гениталии, иначе 0</div>
       </label>
       <label class="field">Размер
         <select id="gen-size"><option value="832x1216">832×1216 вертикально</option>
@@ -515,11 +524,11 @@
       el.querySelector('img').src = g.url;
       el.querySelector('img').title = g.prompt || '';
       if (g.lora) el.querySelector('.info').textContent = `${g.lora.replace(/\.safetensors$/, '')} · ${g.strength} · NSFW ${g.nsfw}` +
-        (g.skin ? ` · кожа ${g.skin}` : '');
+        (g.skin ? ` · кожа ${g.skin}` : '') + (g.anatomy ? ` · анатомия ${g.anatomy}` : '');
       if (g.ref_url) {
         const a = document.createElement('a');
         a.href = g.ref_url; a.target = '_blank'; a.textContent = 'референс';
-        el.querySelector('.info').append(g.denoise ? ` · img2img ${g.denoise}, ` : ' · edit, ', a);
+        el.querySelector('.info').append(g.denoise ? ` · поза ${g.denoise}, ` : ' · замена, ', a);
       }
       if (g.face_fix) el.querySelector('.info').append(` · лицо ${g.face_fix} из ${g.face_from.replace(/\.png$/, '')}`);
       el.querySelector('.face').disabled = !g.lora;
@@ -644,7 +653,7 @@
   $('#body-generate').onclick = () => act(() => api('/api/body/generate',
     { description: bodyDescription(), count: +$('#body-count').value }));
 
-  ['prompt', 'strength', 'nsfw', 'skin', 'size', 'count'].forEach(field => {
+  ['prompt', 'strength', 'nsfw', 'skin', 'anatomy', 'size', 'count'].forEach(field => {
     const el = $('#gen-' + field);
     const saved = recall('lora-studio-gen-' + field);
     if (saved) el.value = saved;
@@ -654,6 +663,32 @@
 
   // референс живёт только в странице и уходит с каждым запросом генерации
   let genRef = null;
+  let describing = false;
+  $('#gen-describe').onclick = async () => {
+    if (!genRef) return;
+    if (!name) { toast('Сначала введите имя персонажа'); return; }
+    describing = true;
+    $('#gen-describe').disabled = true;
+    $('#gen-describe-status').textContent = 'Claude смотрит на картинку… (до минуты)';
+    try {
+      const r = await api('/api/lora/describe', { ref: genRef, mode: $('#gen-mode').value });
+      const img2img = $('#gen-mode').value === 'img2img';
+      const fields = [['prompt', r.prompt], ['strength', r.strength], ['nsfw', r.nsfw], ['skin', r.skin], ['anatomy', r.anatomy]];
+      if (img2img) fields.push(['denoise', r.denoise]);
+      fields.forEach(([field, value]) => {
+        $('#gen-' + field).value = value;
+        remember('lora-studio-gen-' + field, value);
+      });
+      $('#gen-describe-status').textContent = `Готово: LoRA ${r.strength}, NSFW ${r.nsfw}, кожа ${r.skin}, анатомия ${r.anatomy}` +
+        (img2img ? `, перерисовка ${r.denoise}` : '') + '. Можно поправить и генерировать';
+    } catch (e) {
+      $('#gen-describe-status').textContent = '';
+      toast(e.message);
+    } finally {
+      describing = false;
+      $('#gen-describe').disabled = !genRef;
+    }
+  };
   function renderGenRef() {
     const box = $('#gen-ref');
     box.querySelectorAll('.photo').forEach(el => el.remove());
@@ -661,6 +696,10 @@
     $('#gen-size').disabled = !!genRef;
     $('#gen-ref-fields').hidden = !genRef;
     $('#gen-denoise-field').hidden = $('#gen-mode').value !== 'img2img';
+    if (!describing) {
+      $('#gen-describe').disabled = !genRef;
+      $('#gen-describe-status').textContent = genRef ? '' : 'Сначала добавьте референс ниже';
+    }
     if (!genRef) return;
     const el = document.createElement('div');
     el.className = 'photo';
@@ -690,7 +729,7 @@
   $('#gen-run').onclick = () => act(() => {
     const [width, height] = $('#gen-size').value.split('x').map(Number);
     return api('/api/lora/generate', { prompt: $('#gen-prompt').value, lora: $('#gen-lora').value,
-      strength: $('#gen-strength').value === '' ? 1 : +$('#gen-strength').value, nsfw: $('#gen-nsfw').value, skin: $('#gen-skin').value,
+      strength: $('#gen-strength').value === '' ? 1 : +$('#gen-strength').value, nsfw: $('#gen-nsfw').value, skin: $('#gen-skin').value, anatomy: $('#gen-anatomy').value,
       width, height, count: +$('#gen-count').value, ref: genRef, mode: $('#gen-mode').value, denoise: $('#gen-denoise').value });
   });
 

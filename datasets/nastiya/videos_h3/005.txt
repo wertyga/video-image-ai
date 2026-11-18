@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Video of nst woman sitting at a cafe table holding a coffee cup with both hands, wearing a navy striped shirt, warm indoor light, three-quarter view from the right. She lifts one hand and brushes her hair back from her face, then lowers it.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

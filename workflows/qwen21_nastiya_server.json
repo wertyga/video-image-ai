@@ -37,6 +37,34 @@
       "strength_model": 1.0
     }
   },
+  "11": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Skin texture LoRA (0.5 всегда)"
+    },
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "lora_name": "krea2_film_texture_qwen21.safetensors",
+      "strength_model": 0.5
+    }
+  },
+  "12": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Anatomy LoRA (0 - грудь/гениталии не видны, 0.8 - видны)"
+    },
+    "inputs": {
+      "model": [
+        "11",
+        0
+      ],
+      "lora_name": "qwen21_anatomy_v2.safetensors",
+      "strength_model": 0.0
+    }
+  },
   "3": {
     "class_type": "CLIPLoader",
     "_meta": {
@@ -87,7 +115,7 @@
     },
     "inputs": {
       "model": [
-        "10",
+        "12",
         0
       ],
       "positive": [
@@ -131,6 +159,87 @@
         0
       ],
       "filename_prefix": "qwen21_nastiya"
+    }
+  },
+  "40": {
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Upscale model 4x"
+    },
+    "inputs": {
+      "model_name": "4x-UltraSharpV2.safetensors"
+    }
+  },
+  "41": {
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale x4"
+    },
+    "inputs": {
+      "upscale_model": [
+        "40",
+        0
+      ],
+      "image": [
+        "8",
+        0
+      ]
+    }
+  },
+  "42": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "2K (3.1 Мп, ~1440x2160)"
+    },
+    "inputs": {
+      "image": [
+        "41",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 3.1,
+      "resolution_steps": 8
+    }
+  },
+  "43": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save 2K"
+    },
+    "inputs": {
+      "images": [
+        "42",
+        0
+      ],
+      "filename_prefix": "qwen21_nastiya_2k"
+    }
+  },
+  "44": {
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "4K (8.3 Мп, ~2160x3840)"
+    },
+    "inputs": {
+      "image": [
+        "41",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "megapixels": 8.3,
+      "resolution_steps": 8
+    }
+  },
+  "45": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save 4K"
+    },
+    "inputs": {
+      "images": [
+        "44",
+        0
+      ],
+      "filename_prefix": "qwen21_nastiya_4k"
     }
   }
 }

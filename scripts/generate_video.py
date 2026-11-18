@@ -6,6 +6,7 @@
   python scripts/generate_video.py --first-frame start.png [--last-frame end.png] -p "..."
 Персонаж по референсам (ref2va, до 9 картинок, в промпте <Picture 1>, <Picture 2>...):
   python scripts/generate_video.py --ref face.png --ref body.png -p "..." [--turbo]
+  + первый/последний кадр (экспериментально): --ref face.png --first-frame start.png
 Рисованный стиль (Digital Art LoRA): добавить --style 1.0
 Видео сохраняются в output/video/.
 """
@@ -66,8 +67,6 @@ def main():
     parser.add_argument("--host", default="http://127.0.0.1:8188")
     args = parser.parse_args()
 
-    if args.ref and (args.first_frame or args.last_frame):
-        parser.error("--ref (ref2va) нельзя вместе с --first-frame/--last-frame (fl2va): это разные модели")
     if len(args.ref) > 9:
         parser.error("ref2va принимает до 9 референсов")
     if args.turbo and not args.ref:
@@ -107,7 +106,15 @@ def main():
     for key, node_id, path in (("first_frame", "20", args.first_frame), ("last_frame", "21", args.last_frame)):
         if path:
             workflow[node_id] = {"class_type": "LoadImage", "inputs": {"image": upload_image(args.host, path)}}
-            video[key] = [node_id, 0]
+            if args.ref:
+                # у ref2va нет входов first/last_frame: кадр закрепляется узлом Add Guide (экспериментально)
+                guide_id = str(int(node_id) + 2)  # 22, 23
+                workflow[guide_id] = {"class_type": "MiniMaxH3AddGuide", "inputs": {
+                    "positive": workflow["11"]["inputs"]["conditioning"], "vae": ["5", 0], "latent": ["7", 1],
+                    "image": [node_id, 0], "frame_idx": 0 if key == "first_frame" else -1}}
+                workflow["11"]["inputs"]["conditioning"] = [guide_id, 0]
+            else:
+                video[key] = [node_id, 0]
 
     seed = args.seed if args.seed is not None else random.randrange(2**48)
     pending = set()

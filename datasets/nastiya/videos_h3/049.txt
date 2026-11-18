@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman wearing a red bikini, standing in shallow sea water at the beach, seen from behind and looking over her shoulder at the camera, late afternoon sun. She slowly turns her head toward the camera and gives a soft smile.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

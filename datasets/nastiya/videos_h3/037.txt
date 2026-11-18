@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman wearing a white lace bra and panties, barefoot, standing in front of a full-length mirror in a bedroom, three-quarter view from the left, warm lamp light. She shifts her gaze from the side to the camera with a calm expression and blinks.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

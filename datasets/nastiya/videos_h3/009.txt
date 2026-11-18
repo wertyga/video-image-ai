@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Video of nst woman hiking on a mountain trail, wearing a red rain jacket, wind blowing her hair across her face, overcast sky, three-quarter view. She shifts her gaze from the side to the camera with a calm expression and blinks.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

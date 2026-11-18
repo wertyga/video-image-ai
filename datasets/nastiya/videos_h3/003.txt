@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Video of nst woman seen from behind and turning to look over her right shoulder at the camera, wearing a cream knit sweater, autumn street with orange leaves. She laughs softly, her shoulders shaking slightly, then looks back into the lens.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Low-angle video of nst woman standing on a rooftop at dusk, wearing a leather jacket, city lights behind her, looking down at the camera. She gives a small amused smile and raises her eyebrows slightly.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

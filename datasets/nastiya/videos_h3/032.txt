@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman standing nude in strict right profile in front of a plain grey wall, softbox studio light, looking straight ahead. She laughs softly, her shoulders shaking slightly, then looks back into the lens.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

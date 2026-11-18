@@ -25,6 +25,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -40,8 +41,14 @@ DATASETS = ROOT / "datasets"
 AI_TOOLKIT = ROOT / "ai-toolkit"
 TRAIN_OUTPUT = AI_TOOLKIT / "output"
 LORAS = ROOT / "ComfyUI" / "models" / "loras"
-SKIN_LORA = "qwen21_glamour_realism_v1.safetensors"  # кожа без «пластика», ставится с профилями local-16gb и server
-SKIN_NEGATIVE = "airbrushed, plastic skin, glossy skin"
+# как в swap (.claude/skills/swap-prompt): glamour_realism сглаживает кожу, film_texture 0.5 даёт поры без «пластика»
+SKIN_LORA = "krea2_film_texture_qwen21.safetensors"
+# без Anatomy LoRA Qwen рисует гениталии распухшими и бесформенными: 0.8, если они видны
+ANATOMY_LORA = "qwen21_anatomy_v2.safetensors"
+LORA_NEGATIVE = ("plastic skin, smooth skin, airbrushed, waxy skin, glossy skin, oily skin, retouched, cgi, 3d render, "
+                 "skinny, emaciated, visible ribs, fake breasts, implants, perfectly round breasts, blurry, lowres, "
+                 "deformed anatomy, extra fingers, watermark, text, logo, signature, username, website url, copyright text")
+ANATOMY_NEGATIVE = "penis, male genitalia, protruding labia, swollen genitals, malformed genitals, "
 PAGE = Path(__file__).with_suffix(".html")
 TEMPLATE_PROMPTS = ROOT / "training" / "character_prompts.txt"
 TEMPLATE_CONFIG = ROOT / "training" / "character_template.yaml"
@@ -78,7 +85,7 @@ stop_event = threading.Event()
 job = {"kind": None, "name": None, "status": "", "error": "", "step": 0, "total": 0, "log": [], "started": 0, "durations": []}
 queue = []          # (имя, номер) картинок на генерацию
 body_queue = []     # (имя, промпт, исходная картинка или None) вариантов фигуры
-lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, ширина, высота, референс или None,
+lora_queue = []     # (имя, промпт, LoRA, сила, сила NSFW LoRA, сила LoRA кожи, сила Anatomy LoRA, ширина, высота, референс или None,
                     # denoise для img2img или None для edit) картинок с обученной LoRA
 face_queue = []     # (имя, файл из generated/) картинок на доработку лица
 running_item = None
@@ -250,8 +257,8 @@ def generate_body(name, prompt, source):
     next_path(project.candidates, f"{name}_cand").write_bytes(data)
 
 
-def lora_workflow(prompt, lora, strength, nsfw, skin):
-    """Workflow с LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README."""
+def lora_workflow(prompt, lora, strength, nsfw, skin, anatomy=0):
+    """Цепочка как в swap: NSFW LoRA -> персонаж -> кожа (film texture) -> Anatomy LoRA, негатив против пластика."""
     workflow = json.loads((ROOT / "workflows" / f"qwen21_nsfw_{args.profile}.json").read_text(encoding="utf-8"))
     seed = random.randrange(2**48)
     workflow["5"]["inputs"]["prompt"] = prompt
@@ -259,11 +266,14 @@ def lora_workflow(prompt, lora, strength, nsfw, skin):
     workflow["30"] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": "Character LoRA"},
                       "inputs": {"model": ["2", 0], "lora_name": lora, "strength_model": strength}}
     workflow["7"]["inputs"].update(model=["30", 0], seed=seed)
-    if skin:
-        workflow["31"] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": "Skin LoRA"},
-                          "inputs": {"model": ["30", 0], "lora_name": SKIN_LORA, "strength_model": skin}}
-        workflow["7"]["inputs"].update(model=["31", 0], cfg=2.5)
-        workflow["5"]["inputs"]["negative_prompt"] += ", " + SKIN_NEGATIVE
+    model = "30"
+    for node, title, name, value in (("31", "Skin LoRA", SKIN_LORA, skin), ("32", "Anatomy LoRA", ANATOMY_LORA, anatomy)):
+        if value:
+            workflow[node] = {"class_type": "LoraLoaderModelOnly", "_meta": {"title": title},
+                              "inputs": {"model": [model, 0], "lora_name": name, "strength_model": value}}
+            model = node
+    workflow["7"]["inputs"]["model"] = [model, 0]
+    workflow["5"]["inputs"]["negative_prompt"] = (ANATOMY_NEGATIVE if anatomy else "") + LORA_NEGATIVE
     return workflow, seed
 
 
@@ -318,22 +328,32 @@ def fix_face(name, file):
     path.with_suffix(".json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
 
 
-def generate_with_lora(name, prompt, lora, strength, nsfw, skin, width, height, ref, denoise):
-    """Проверка обученной LoRA: LoRA персонажа после NSFW LoRA, с LoRA кожи - ещё она и CFG 2.5, как советует README.
-    Без референса - текст в картинку. С референсом и denoise - img2img: лицо рисует LoRA, как при обучении;
-    без denoise - режим edit (<image1>), модель видит референс и тянет с него и лицо. Размер - с референса."""
+def generate_with_lora(name, prompt, lora, strength, nsfw, skin, anatomy, width, height, ref, denoise):
+    """Проверка обученной LoRA: цепочка LoRA как в swap (lora_workflow).
+    Без референса - текст в картинку. С референсом - как swap.py: модель видит референс как <image1>
+    (цвет, свет и фактура кожи с настоящего фото), с denoise ещё и стартует с его латента (поза точно с фото).
+    Чистый img2img без <image1> давал глянцевую «пластиковую» кожу. Размер - с референса (~1 Мп)."""
     project = Project(name)
-    workflow, seed = lora_workflow(prompt, lora, strength, nsfw, skin)
-    if ref and denoise is not None:
-        add_img2img(workflow, upload_image(args.host, project.gen_refs / ref), denoise)
-    elif ref:
-        add_edit(workflow, [upload_image(args.host, project.gen_refs / ref)])
+    workflow, seed = lora_workflow(prompt, lora, strength, nsfw, skin, anatomy)
+    if ref:
+        workflow["20"] = {"class_type": "LoadImage", "_meta": {"title": "Input image"},
+                          "inputs": {"image": upload_image(args.host, project.gen_refs / ref)}}
+        workflow["21"] = {"class_type": "ImageScaleToTotalPixels",
+                          "inputs": {"image": ["20", 0], "upscale_method": "lanczos", "megapixels": 1.0,
+                                     "resolution_steps": 32}}
+        workflow["5"]["inputs"].update({"vae": ["4", 0], "resolution": 0, "images.image_1": ["21", 0]})
+        workflow["7"]["inputs"]["latent_image"] = ["5", 2]
+        if denoise is not None:
+            workflow["22"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["21", 0], "vae": ["4", 0]}}
+            workflow["7"]["inputs"].update(latent_image=["22", 0], denoise=denoise)
+        del workflow["6"]
     else:
         workflow["6"]["inputs"].update(width=width, height=height)
     data = wait_image(post(f"{args.host}/prompt", {"prompt": workflow})["prompt_id"])
     path = next_path(project.generated, f"{name}_gen")
     path.write_bytes(data)
-    info = {"prompt": prompt, "lora": lora, "strength": strength, "nsfw": nsfw, "skin": skin, "seed": seed, "ref": ref,
+    info = {"prompt": prompt, "lora": lora, "strength": strength, "nsfw": nsfw, "skin": skin, "anatomy": anatomy,
+            "seed": seed, "ref": ref,
             "denoise": denoise}
     path.with_suffix(".json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
 
@@ -600,7 +620,7 @@ def state(name):
         queued, running = list(queue), running_item
         body_pending = sum(t[0] == name for t in body_queue) + (len(running or ()) == 3 and running[0] == name)
         # running_item доработки лица - (имя, файл), у фото датасета на этом месте номер
-        lora_pending = (sum(t[0] == name for t in lora_queue + face_queue) + (len(running or ()) == 10 and running[0] == name)
+        lora_pending = (sum(t[0] == name for t in lora_queue + face_queue) + (len(running or ()) == 11 and running[0] == name)
                         + (len(running or ()) == 2 and isinstance(running[1], str) and running[0] == name))
     if not name:
         return result
@@ -683,6 +703,69 @@ def upload_dataset_images(project, files, index=None):
         item_errors.pop((project.name, i), None)
 
 
+DESCRIBE_RULES = """Look at the image {image} (open it with the Read tool) and write ONE image-generation prompt in English
+for a character LoRA. The character is called by the trigger "{trigger}". Reply with the prompt only: no quotes,
+no markdown, no explanations, then on the last line "NSFW: 0" if she is dressed (including lingerie or swimwear)
+or "NSFW: 0.8" if she is topless or nude, and one more last line "ANATOMY: 0.8" if her genitals
+(vulva, labia) are visible, otherwise "ANATOMY: 0". If the person in the image looks underage, reply exactly: ERROR: minor.
+
+Never describe the person's identity: hair, hairstyle, hair color, eyes, face, facial features, makeup, skin tone,
+age, ethnicity. They come from the LoRA. Do not write "same face" or "keep her face".
+
+{mode_rules}"""
+DESCRIBE_EDIT = """Format, exactly this template with <ADDITION> filled in:
+Replace the woman in <image1> with {trigger}{body}. Keep everything else exactly as in <image1>: the same pose, body position, head position and angle, gaze direction and facial expression, the same clothing and accessories (or the same nudity), the same framing, camera angle, background and lighting. <ADDITION> Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.
+
+<ADDITION> is 1-3 sentences only about what the model will not keep by itself:
+1. clothing that is removed, pulled down or moved aside: say concretely what and where
+   ("her bra is pulled down below her breasts, both breasts fully exposed"); fully naked: "She is completely naked.";
+2. arms and legs in an unusual position (behind the head, between the legs, covering the face, leg bent or crossed);
+3. a special facial expression (open mouth, closed eyes, tongue, smile, looking down);
+4. what intimate parts are visible, if any.
+5. a watermark, logo, signature, website URL or any text overlay on the photo (often small, semi-transparent, in a
+   corner): name where it is and remove it, e.g. "Remove the watermark text in the bottom right corner of <image1>;
+   that area shows only the clean background." Always check the corners and edges for it.
+If nothing applies, drop <ADDITION> entirely."""
+
+
+def describe_reference(project, data_url, mode):
+    """Промпт по картинке-референсу: пишет Claude Code (claude -p) по тем же правилам, что и вручную."""
+    claude = shutil.which("claude")
+    if not claude:
+        raise RuntimeError("Не найден claude (Claude Code CLI) в PATH")
+    trigger = project.trigger() or "the woman"
+    body = project.body_description()
+    # с референсом модель всегда видит его как <image1> (как swap), поэтому промпт - шаблон замены
+    rules = DESCRIBE_EDIT.format(trigger=trigger, body=f": {body}" if body else "")
+    with tempfile.TemporaryDirectory() as tmp:
+        image = Path(tmp) / "reference.png"
+        decode_image(data_url).save(image)
+        try:
+            result = subprocess.run(
+                [claude, "-p", "--allowedTools", "Read", "--add-dir", tmp, "--output-format", "text"],
+                input=DESCRIBE_RULES.format(image=image.as_posix(), trigger=trigger, mode_rules=rules),
+                capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=tmp, timeout=300)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("Claude не ответил за 5 минут")
+    text = result.stdout.strip()
+    if result.returncode or not text:
+        raise RuntimeError("Claude: " + (result.stderr.strip() or text or f"код {result.returncode}")[-500:])
+    if text.startswith("ERROR"):
+        raise RuntimeError("Claude отказался: " + text)
+    values = {}
+    for key in ("NSFW", "ANATOMY"):
+        if match := re.search(rf"^\s*{key}:\s*([\d.]+)\s*$", text, re.MULTILINE | re.IGNORECASE):
+            values[key] = min(float(match[1]), 1.0)
+            text = text[:match.start()] + text[match.end():]
+    nsfw = values.get("NSFW", 0.8 if NUDE.search(text) else None)
+    text = text.strip().strip("`").strip().strip('"').strip()
+    # силы по правилам swap-prompt: персонаж 1.0 всегда, NSFW 0 одета / 0.8 топлес и ню, кожа 0.5,
+    # Anatomy 0.8 только если видны гениталии
+    # поза с фото: локально (int8) на 0.85-0.9 ещё проступают волосы и лицо исходной модели, 0.95 - чисто
+    return {"prompt": " ".join(text.split()), "strength": 1.0, "nsfw": nsfw if nsfw is not None else 0.0,
+            "anatomy": values.get("ANATOMY", 0.0), "skin": 0.5, "denoise": 0.95}
+
+
 def handle_post(path, body):
     project = Project(body.get("name", "")) if path != "/api/stop" else None
     if path == "/api/photos":
@@ -751,8 +834,7 @@ def handle_post(path, body):
         if nsfw in (None, ""):
             nsfw = args.nsfw_lora if NUDE.search(prompt) else args.lora
         skin = float(body.get("skin") or 0)
-        if skin and not (LORAS / SKIN_LORA).exists():
-            raise ValueError(f"Нет LoRA кожи ComfyUI/models/loras/{SKIN_LORA}: скачайте профилем setup")
+        anatomy = float(body.get("anatomy") or 0)
         ref = None
         if body.get("ref"):
             # имя уникально между персонажами: в ComfyUI все загрузки лежат в одной папке input/
@@ -761,10 +843,10 @@ def handle_post(path, body):
             ref = path.name
         denoise = None
         if ref and body.get("mode") != "edit":
-            denoise = float(body.get("denoise") or 0.65)
+            denoise = float(body.get("denoise") or 0.95)
             if not 0 < denoise <= 1:
                 raise ValueError("Сила перерисовки: от 0 до 1")
-        task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, *size, ref, denoise)
+        task = (prompt, source.name, float(body.get("strength", 1.0)), float(nsfw), skin, anatomy, *size, ref, denoise)
         enqueue(project, lora_tasks=[task] * min(int(body.get("count", 1)), 8))
     elif path == "/api/lora/face":
         if not (project.generated / Path(body["file"]).name).exists():
@@ -823,6 +905,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/api/lora/describe":
+            self.respond(lambda: self.send_json(describe_reference(
+                Project(body.get("name", "")), body["ref"], body.get("mode", "img2img"))))
+            return
         self.respond(lambda: (handle_post(urllib.parse.urlparse(self.path).path, body), self.send_json({"ok": True})))
 
 

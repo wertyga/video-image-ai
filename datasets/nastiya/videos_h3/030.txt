@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Video of nst woman at a farmers market holding a basket of apples, wearing a green flannel shirt, overcast daylight, glancing back at the camera with a smile. She slowly turns her head toward the camera and gives a soft smile.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

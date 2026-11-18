@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman wearing a fitted black turtleneck and a beige pencil skirt with heels, standing in a bright office, front view, diffused window light. She gives a small amused smile and raises her eyebrows slightly.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
