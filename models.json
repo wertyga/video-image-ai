@@ -105,6 +105,14 @@
         "h3_lora_nsfw_v2",
         "h3_lora_digital_art"
       ]
+    },
+    "h3-control-server": {
+      "description": "MiniMax H3 fl2va + Fun ControlNet-Union (поза/глубина/canny из видео) + SDPose, int8; ставится вместе с h3-server, GPU 48GB+",
+      "files": [
+        "h3_fun_controlnet_int8",
+        "sdpose_wholebody",
+        "rtdetr_person"
+      ]
     }
   },
   "files": {
@@ -233,6 +241,18 @@
       "dir": "loras",
       "name": "qwen21_anatomy_v2.safetensors",
       "auth": "civitai"
+    },
+    "h3_fun_controlnet_int8": {
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/model_patches/minimax_h3_fun_controlnet_union_pruned_int8_convrot.safetensors",
+      "dir": "model_patches"
+    },
+    "sdpose_wholebody": {
+      "url": "https://huggingface.co/Comfy-Org/SDPose/resolve/main/checkpoints/sdpose_wholebody_fp16.safetensors",
+      "dir": "checkpoints"
+    },
+    "rtdetr_person": {
+      "url": "https://huggingface.co/Comfy-Org/SDPose/resolve/main/diffusion_models/rt_detr_v4-x-hgnet_fp16.safetensors",
+      "dir": "diffusion_models"
     }
   }
 }
