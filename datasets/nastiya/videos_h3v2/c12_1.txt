@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Close-up portrait video of nst woman resting her chin on her hand with a dreamy expression, three-quarter view to the left, wearing a striped shirt, soft window light, cafe interior behind her. She takes a slow breath, glances down, then raises her eyes to the camera.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

@@ -1,0 +1,70 @@
+# Датасет nastiya H3 v2: генерация Qwen Image 2.1 + nastiya_v3 (scripts/make_dataset_lora.py).
+# Формат: имя | nsfw | anatomy | размер (v=832x1216, h=1216x832, s=1024x1024) | сцена
+# Сцена = подпись без триггера: "<кадр> of nst woman ...". Внешность (лицо, волосы, глаза) не описывать.
+# Фигуру не описывать (body.txt удалён): с описанием Настя выходила полнее, чем надо.
+# Половина кадров крупные/средние, разные ракурсы головы, эмоции и свет.
+
+# --- крупные планы: ракурсы и эмоции
+c01|0|0|v|Close-up portrait photograph of nst woman looking straight into the camera with a calm neutral expression, wearing a plain white t-shirt, soft overcast daylight, plain light grey wall behind her
+c02|0|0|v|Close-up portrait photograph of nst woman laughing with her eyes slightly squinted, head turned in a three-quarter view to the left, wearing a denim jacket, bright afternoon sun, blurred city park behind her
+c03|0|0|v|Close-up portrait photograph of nst woman in a three-quarter view to the right with a soft closed-mouth smile, wearing a black knit sweater, warm golden hour light from the side, blurred trees behind her
+c04|0|0|v|Close-up photograph of nst woman in strict right profile looking ahead, wearing a navy coat, cool morning light, blurred grey sea behind her
+c05|0|0|v|Close-up photograph of nst woman in strict left profile with her eyes closed, wearing a beige linen shirt, warm sunset backlight, blurred field behind her
+c06|0|0|v|Close-up portrait photograph of nst woman looking slightly up at the camera with a playful grin, chin raised, wearing a red hoodie, on-camera flash at night, dark street behind her
+c07|0|0|v|Close-up portrait photograph of nst woman looking down at a book with a thoughtful expression, wearing a grey cardigan, warm lamp light, cozy living room behind her
+c08|0|0|v|Close-up portrait photograph of nst woman with a surprised expression and raised eyebrows, mouth slightly open, wearing a green blouse, bright office light, blurred office behind her
+c09|0|0|v|Close-up portrait photograph of nst woman with a serious focused expression, head tilted slightly to the right, wearing a white shirt, hard noon sunlight with strong shadows, white stucco wall behind her
+c10|0|0|v|Close-up portrait photograph of nst woman smiling widely and showing her teeth, looking into the camera, wearing a yellow sundress, bright beach daylight, blurred blue sea behind her
+c11|0|0|v|Close-up portrait photograph of nst woman glancing over her left shoulder at the camera, wearing a black leather jacket, pink and blue neon light at night, blurred city lights behind her
+c12|0|0|v|Close-up portrait photograph of nst woman resting her chin on her hand with a dreamy expression, three-quarter view to the left, wearing a striped shirt, soft window light, cafe interior behind her
+c13|0|0|v|Close-up portrait photograph of nst woman winking at the camera with a smile, wearing a white tank top, warm indoor light, kitchen behind her
+c14|0|0|v|Close-up portrait photograph of nst woman in a three-quarter view to the right looking off camera, wearing a burgundy turtleneck, dim moody light from a single window, dark room behind her
+c15|0|0|v|Close-up portrait photograph of nst woman with a gentle smile, wearing a knit beanie and a scarf, cold blue winter daylight, snowy street behind her
+c16|0|0|v|Close-up portrait photograph of nst woman lying on a pillow and looking at the camera with a sleepy smile, seen from above, wearing a white cotton t-shirt, soft morning light, white bed sheets around her
+
+# --- средние планы: по пояс
+m01|0|0|v|Waist-up photograph of nst woman sitting at a cafe table holding a coffee cup with both hands, wearing a grey knit sweater, soft daylight from the window, cozy cafe behind her
+m02|0|0|v|Waist-up photograph of nst woman walking along a city street at golden hour and laughing, wearing a white t-shirt and a denim jacket, warm backlight, blurred street behind her
+m03|0|0|v|Waist-up photograph of nst woman leaning on a kitchen counter and smiling at the camera, wearing an oversized blue shirt, morning light from a window, bright kitchen behind her
+m04|0|0|v|Waist-up photograph of nst woman standing on a balcony in a three-quarter view to the left, wearing a white linen dress, warm evening sun, city rooftops behind her
+m05|0|0|v|Waist-up photograph of nst woman in a gym wearing a black sports top, wiping her forehead with a towel and smiling, bright gym lighting, exercise equipment behind her
+m06|0|0|v|Waist-up photograph of nst woman reading a menu in a restaurant at night, wearing a black satin top, warm candle light, blurred restaurant behind her
+m07|0|0|h|Waist-up photograph of nst woman sitting in a car driver seat and looking at the camera, wearing a beige trench coat, daylight through the windshield, car interior around her
+m08|0|0|v|Waist-up photograph of nst woman standing in the rain under a black umbrella, wearing a yellow raincoat, grey overcast light, wet city street behind her
+m09|0|0|v|Waist-up photograph of nst woman holding a bouquet of flowers and smelling them with her eyes closed, wearing a light pink blouse, soft daylight, flower market behind her
+m10|0|0|v|Waist-up photograph of nst woman on a sofa with her legs tucked under her, holding a mug, wearing grey loungewear, warm evening lamp light, living room behind her
+m11|0|0|v|Waist-up photograph of nst woman in a bathrobe brushing her teeth in front of a mirror, bright bathroom light, white tiles behind her
+m12|0|0|v|Waist-up photograph of nst woman typing on a laptop at a desk and looking at the screen, wearing a white blouse, cool office light, office behind her
+m13|0|0|h|Waist-up photograph of nst woman sitting on a train by the window and looking out, wearing a camel coat, soft daylight, countryside passing outside
+m14|0|0|v|Waist-up photograph of nst woman at a party holding a glass of wine and laughing, wearing a red dress, colorful party lights, blurred people behind her
+m15|0|0|v|Waist-up photograph of nst woman tying her sneakers on a park bench, seen from the side, wearing a grey hoodie, morning light, park behind her
+m16|0|0|v|Waist-up photograph of nst woman wearing a black lace bra, standing by a window and looking out, soft daylight on her skin, bedroom behind her
+m17|0.8|0|v|Waist-up photograph of nst woman topless, covering her breasts with her arms and smiling shyly at the camera, soft warm light, bedroom behind her
+m18|0.8|0|v|Waist-up photograph of nst woman topless, standing in a bathroom with wet skin after a shower, three-quarter view to the right, steamy soft light, white tiles behind her
+m19|0.8|0|v|Waist-up photograph of nst woman topless, lying on a bed on her side and looking at the camera, warm lamp light, white sheets around her
+m20|0.8|0|v|Waist-up photograph of nst woman nude, sitting on the edge of a bathtub and looking over her shoulder at the camera, soft window light, bathroom behind her
+
+# --- в полный рост, одета
+f01|0|0|v|Full-body photograph of nst woman walking towards the camera on a city sidewalk, wearing a white t-shirt, blue jeans and white sneakers, bright daylight, street behind her
+f02|0|0|v|Full-body photograph of nst woman standing in a bright office, wearing a black turtleneck and a beige pencil skirt with heels, diffused window light, office behind her
+f03|0|0|v|Full-body photograph of nst woman sitting on stone steps, wearing a green summer dress and sandals, warm afternoon light, old town behind her
+f04|0|0|v|Full-body photograph of nst woman on a beach in a blue swimsuit, walking along the waterline and looking at the camera, bright sunlight, sea behind her
+f05|0|0|v|Full-body photograph of nst woman leaning against a brick wall, wearing a leather jacket, black jeans and boots, overcast daylight, alley behind her
+f06|0|0|v|Full-body photograph of nst woman doing a yoga pose on a mat, wearing grey leggings and a sports top, soft morning light, bright studio behind her
+f07|0|0|v|Full-body photograph of nst woman seen from behind and turning to look over her shoulder, wearing a long black evening dress, warm evening light, hotel lobby behind her
+f08|0|0|h|Full-body photograph of nst woman lying on a picnic blanket on the grass and reading, wearing a white summer dress, soft afternoon sun, park around her
+f09|0|0|v|Full-body photograph of nst woman dancing in a living room, wearing an oversized shirt and socks, warm lamp light, cozy living room behind her
+f10|0|0|v|Full-body photograph of nst woman hiking on a mountain trail, wearing a red jacket, shorts and hiking boots, bright daylight, mountains behind her
+
+# --- в полный рост, бельё и ню
+# убрано: даже без body.txt выходит слишком толстой
+# n01|0|0|v|Full-body photograph of nst woman standing in a bedroom in black lingerie, warm lamp light, bed behind her
+n02|0|0|v|Full-body photograph of nst woman in a white lace bra and panties sitting on the edge of a bed, soft morning light, white sheets
+n03|0.8|0|v|Full-body photograph of nst woman nude, standing by a large window in a three-quarter view, seen from the side, soft daylight on her body, minimal apartment behind her
+n04|0.8|0|v|Full-body photograph of nst woman nude, seen from behind walking into the sea, looking back over her shoulder, golden hour light, beach around her
+n05|0.8|0|v|Full-body photograph of nst woman nude, kneeling on a fur rug in front of a fireplace, warm firelight on her body, dark cozy room behind her
+n06|0.8|0|h|Full-body photograph of nst woman nude, lying on a white sofa on her side with her legs together, soft daylight, bright living room behind her
+n07|0.8|0|v|Full-body photograph of nst woman topless in denim shorts, standing in a sunny garden and smiling, bright afternoon light, green plants behind her
+n08|0.8|0.8|v|Full-body photograph of nst woman completely nude, standing facing the camera in a bathroom, her vulva visible, soft bright light, white tiles behind her
+n09|0.8|0.8|h|Full-body photograph of nst woman completely nude, lying on her back on a bed with her knees slightly apart, her vulva visible, warm lamp light, white sheets around her
+n10|0.8|0|v|Full-body photograph of nst woman nude, sitting cross-legged on a bed and laughing, morning light from a window, white sheets around her

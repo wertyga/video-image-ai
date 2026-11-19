@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Close-up portrait video of nst woman lying on a pillow and looking at the camera with a sleepy smile, seen from above, wearing a white cotton t-shirt, soft morning light, white bed sheets around her. She gives a small amused smile and raises her eyebrows slightly.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

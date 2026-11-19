@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Waist-up video of nst woman in a gym wearing a black sports top, wiping her forehead with a towel and smiling, bright gym lighting, exercise equipment behind her. She slowly turns her head to the side and back, looking around.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

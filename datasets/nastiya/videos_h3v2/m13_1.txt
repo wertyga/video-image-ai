@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Waist-up video of nst woman sitting on a train by the window and looking out, wearing a camel coat, soft daylight, countryside passing outside. She lifts one hand and brushes her hair back from her face, then lowers it.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

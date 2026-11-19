@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman hiking on a mountain trail, wearing a red jacket, shorts and hiking boots, bright daylight, mountains behind her. She tilts her head slightly and smiles, breathing calmly.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

@@ -1,0 +1,82 @@
+# nastiya v2 для MiniMax H3: датасет images_h3v2 = 55 кадров Qwen Image 2.1 + nastiya_v3 (одно лицо во всех ракурсах, без вклеенного рефа),
+# отбор по face_score.py; videos_h3v2 = 25 роликов H3 из этих кадров (make_video_dataset.py). Первая версия (images_h3) лицо не держала.
+# Картинки до 1024 (v1 шла на 512+768 и занимала ~26 из 48 ГБ); при OOM убрать 1024.
+# Сервер 48GB, ComfyUI остановить.
+# Запуск: ./scripts/train_lora.sh training/nastiya_h3v2.yaml
+job: extension
+config:
+  name: "nastiya_h3v2"
+  process:
+    - type: "sd_trainer"
+      training_folder: "output"   # внутри ai-toolkit/
+      device: cuda:0
+      trigger_word: "nst woman"
+      network:
+        type: "lora"
+        linear: 32
+        linear_alpha: 32
+      save:
+        dtype: bf16
+        save_every: 250
+        max_step_saves_to_keep: 10
+      datasets:
+        - folder_path: "../datasets/nastiya/images_h3v2"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [512, 768, 1024]
+        # ролики из scripts/make_video_dataset.py; если папки ещё нет — закомментировать этот блок
+        - folder_path: "../datasets/nastiya/videos_h3v2"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [512]
+          num_frames: 41   # 17k+5; при OOM — 22
+          fps: 24
+          do_audio: false
+      train:
+        batch_size: 1
+        cache_text_embeddings: true   # энкодер 32B выгружается после кэша
+        steps: 3000
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "flowmatch"
+        timestep_type: "shift"
+        optimizer: "adamw8bit"
+        lr: 1e-4
+        dtype: bf16
+      model:
+        # файлы ищутся в ComfyUI/models (MODELS_PATH задаёт train_lora-скрипт), недостающие докачиваются
+        name_or_path: "Comfy-Org/MiniMax-H3"
+        arch: "minimax_h3"
+        low_vram: true
+        # оставить поставляемое квантование: без этого тренер распаковывает DiT и энкодер 32B в bf16 (OOM на 48 ГБ)
+        quantize: true
+        qtype: "convrot8"
+        quantize_te: true
+        qtype_te: "nvfp4"
+        model_kwargs:
+          partition: "fl2va_pruned"
+          # энкодер nvfp4 (тренер докачает, ~20 ГБ): int8 из h3-server на 48 ГБ не влез при кэше подписей (OOM)
+          sample_audio: false
+      sample:
+        sampler: "flowmatch"
+        sample_every: 250
+        width: 512
+        height: 768
+        num_frames: 1   # пробные кадры картинками, видео проверять в ComfyUI
+        prompts:
+          - "integrated_multimodal_description: [Shot 1] Live-action, static shot. Photograph of nst woman sitting in a cafe by the window, wearing a grey sweater, soft daylight.\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A"
+          - "integrated_multimodal_description: [Shot 1] Live-action, static shot. Close-up portrait photograph of nst woman smiling, golden hour backlight, city street behind her.\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A"
+          - "integrated_multimodal_description: [Shot 1] Live-action, static shot. Full-body photograph of nst woman standing in a bedroom in black lingerie, warm lamp light.\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A"
+        neg: ""
+        seed: 42
+        walk_seed: true
+        sample_steps: 30
+meta:
+  name: "[name]"
+  version: "1.0"

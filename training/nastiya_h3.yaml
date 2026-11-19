@@ -39,7 +39,7 @@ config:
       train:
         batch_size: 1
         cache_text_embeddings: true   # энкодер 32B выгружается после кэша
-        steps: 2000
+        steps: 3000
         gradient_accumulation: 1
         train_unet: true
         train_text_encoder: false
@@ -54,6 +54,11 @@ config:
         name_or_path: "Comfy-Org/MiniMax-H3"
         arch: "minimax_h3"
         low_vram: true
+        # оставить поставляемое квантование: без этого тренер распаковывает DiT и энкодер 32B в bf16 (OOM на 48 ГБ)
+        quantize: true
+        qtype: "convrot8"
+        quantize_te: true
+        qtype_te: "nvfp4"
         model_kwargs:
           partition: "fl2va_pruned"
           # энкодер nvfp4 (тренер докачает, ~20 ГБ): int8 из h3-server на 48 ГБ не влез при кэше подписей (OOM)

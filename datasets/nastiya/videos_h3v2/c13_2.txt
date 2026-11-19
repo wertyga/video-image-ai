@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Close-up portrait video of nst woman winking at the camera with a smile, wearing a white tank top, warm indoor light, kitchen behind her. She slowly turns her head to the side and back, looking around.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

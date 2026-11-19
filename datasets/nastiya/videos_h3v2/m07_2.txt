@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Waist-up video of nst woman sitting in a car driver seat and looking at the camera, wearing a beige trench coat, daylight through the windshield, car interior around her. She gives a small amused smile and raises her eyebrows slightly.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

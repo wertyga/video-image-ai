@@ -5,7 +5,7 @@ description: Замена модели на фото персонажем с LoR
 
 # Замена модели на фото персонажем (Qwen Image 2.1, сервер)
 
-Персонаж по умолчанию: Настия, триггер `nst woman`, LoRA `nastiya_v3.safetensors`, фигура из `datasets/nastiya/body.txt`.
+Персонаж по умолчанию: Настия, триггер `nst woman`, LoRA `nastiya_v3.safetensors`. Фигуру даёт LoRA, текстом не описывается.
 Пользователь ничего не подбирает вручную: настройки, промпт, запуск и проверку делаешь сам.
 Если человек на фото выглядит несовершеннолетним, ничего не делай.
 
@@ -46,7 +46,7 @@ description: Замена модели на фото персонажем с LoR
 ## Промпт
 
 ```
-Replace the woman in <image1> with nst woman: <body.txt>. Keep everything else exactly as in <image1>: the same pose, body position, head position and angle, gaze direction and facial expression, the same clothing and accessories (or the same nudity), the same framing, camera angle, background and lighting. <ДОПОЛНЕНИЕ> Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.
+Replace the woman in <image1> with nst woman. Keep everything else exactly as in <image1>: the same pose, body position, head position and angle, gaze direction and facial expression, the same clothing and accessories (or the same nudity), the same framing, camera angle, background and lighting. <ДОПОЛНЕНИЕ> Natural realistic skin texture with visible pores, fine skin details, slight imperfections, matte skin, candid amateur photo.
 ```
 
 `<ДОПОЛНЕНИЕ>` — 1–3 предложения только о том, что модель сама не удержит:
@@ -57,7 +57,7 @@ Replace the woman in <image1> with nst woman: <body.txt>. Keep everything else e
 
 COVER (одета в бельё, грудь должна быть закрыта): перед описанием добавь `Her breasts are fully covered by the bra: lined lace bra cups, nothing exposed.` Слово `sheer` не используй.
 
-Нельзя: описывать лицо, волосы, глаза (их даёт LoRA); писать `keep her face`, `same face`. Фигуру бери дословно из `body.txt`.
+Нельзя: описывать лицо, волосы, глаза (их даёт LoRA); писать `keep her face`, `same face`. Фигуру не описывай: `datasets/nastiya/body.txt` удалён 2026-11-18, с ним Настя выходила полнее, чем надо (больше грудь, шире бёдра), а «по пояс» превращалось в кадр с ногами.
 
 ## Негатив
 
@@ -87,6 +87,6 @@ python scripts/swap.py --server --lora-only --host http://127.0.0.1:8189 --image
 
 ## Известные особенности
 
-- Фигура выходит немного полнее, чем у худых исходных моделей: так действует `body.txt`.
+- Без описания фигуры при замене она частично берётся с исходного фото; если нужна именно фигура Насти, бери фото с похожим телосложением.
 - С Anatomy LoRA кожа светлеет; если важно, допиши `olive skin, tanned skin`.
 - Детейлер лица (кроп → перерисовка 1024 с denoise 0.85 → вклейка) даёт +0.04–0.07 к похожести; делается отдельным скриптом, по запросу.

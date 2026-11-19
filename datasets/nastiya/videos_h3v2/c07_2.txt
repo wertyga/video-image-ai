@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Close-up portrait video of nst woman looking down at a book with a thoughtful expression, wearing a grey cardigan, warm lamp light, cozy living room behind her. She shifts her gaze from the side to the camera with a calm expression and blinks.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

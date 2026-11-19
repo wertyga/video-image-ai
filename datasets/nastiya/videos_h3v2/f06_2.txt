@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Full-body video of nst woman doing a yoga pose on a mat, wearing grey leggings and a sports top, soft morning light, bright studio behind her. She lifts one hand and brushes her hair back from her face, then lowers it.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A

@@ -1,0 +1,5 @@
+integrated_multimodal_description: [Shot 1] Live-action, static shot with subtle handheld drift. Close-up portrait video of nst woman in a three-quarter view to the right with a soft closed-mouth smile, wearing a black knit sweater, warm golden hour light from the side, blurred trees behind her. She laughs softly, her shoulders shaking slightly, then looks back into the lens.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
